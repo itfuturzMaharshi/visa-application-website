@@ -199,33 +199,59 @@ const destinations = [
   },
 ];
 
+const focusTags = [
+  "Priority Interview",
+  "Executive Trips",
+  "Family Travel",
+  "Digital Nomads",
+  "Residency Programs",
+];
+
+const insights = [
+  { label: "Avg visa approvals / day", value: "740+" },
+  { label: "Active country desks", value: "36" },
+  { label: "Fastest record this week", value: "11h" },
+];
+
 const Destinations = () => (
-  <section  className="bg-white">
-    <div className="mx-auto p-6">
-      <div className=" grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+  <section
+    id="destinations"
+    className="relative overflow-hidden bg-linear-to-b from-[#030b1a] via-[#05132b] to-[#071a3d]  text-white"
+  >
+    <div className="relative mx-auto  p-8">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {destinations.map((destination, index) => (
           <Reveal key={destination.country} delay={index * 60}>
-            <article className="flex h-full flex-col overflow-hidden rounded-[26px] border border-slate-100 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(15,23,42,0.12)]">
-              <div className="relative">
-                <img
-                  src={destination.image}
-                  alt={destination.country}
-                  className="h-48 w-full object-cover"
-                />
-                <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-[#5f7cff] px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-indigo-900/30">
-                  {destination.visas}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-col gap-2 p-5">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {destination.country}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Get on{" "}
-                  <span className="font-semibold text-[#5f7cff]">
-                    {destination.eta}
-                  </span>
-                </p>
+            <article className="group relative flex h-80 flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl shadow-slate-950/40 transition hover:-translate-y-1 hover:border-white/30 hover:bg-white/10">
+              <img
+                src={destination.image}
+                alt={destination.country}
+                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-linear-to-b from-slate-950/10 via-slate-950/40 to-slate-950/90" />
+              <div className="relative z-10 flex flex-1 flex-col justify-between p-6">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-blue-100/70">
+                  <span>Mission Desk</span>
+                  <span>{destination.eta}</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-semibold text-white">
+                    {destination.country}
+                  </h3>
+                  <p className="mt-2 text-sm text-blue-100/80">
+                    {destination.visas}
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 text-xs text-blue-100/60">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 px-3 py-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      Concierge ready
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 px-3 py-1">
+                      Track
+                      <span aria-hidden>→</span>
+                    </span>
+                  </div>
+                </div>
               </div>
             </article>
           </Reveal>

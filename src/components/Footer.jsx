@@ -5,7 +5,7 @@ const footerLinks = {
 };
 
 const Footer = () => (
-  <footer id="contact" className="mt-12 border-t border-white/10 bg-[#050913] text-slate-200">
+  <footer id="contact" className="border-t border-white/10 bg-[#050913] text-slate-200">
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-4">
