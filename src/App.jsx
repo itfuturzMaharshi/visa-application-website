@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Destinations from "./components/Destinations";
@@ -8,36 +8,25 @@ import Footer from "./components/Footer";
 import CountryDetails from "./components/countryDetails/CountryDetails";
 
 function App() {
-  const [selectedDestination, setSelectedDestination] = useState(null);
-
-  const handleSelectDestination = useCallback((destination) => {
-    setSelectedDestination(destination);
-    window?.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-  const handleBackToDestinations = useCallback(() => {
-    setSelectedDestination(null);
-    window?.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#f5f7fb] text-slate-900">
       <Header />
-      {selectedDestination ? (
-        <CountryDetails
-          country={selectedDestination}
-          onBack={handleBackToDestinations}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <Hero />
+              <main>
+                <Destinations />
+                <Pricing />
+                <FAQ />
+              </main>
+            </>
+          }
         />
-      ) : (
-        <>
-          <Hero />
-          <main>
-            <Destinations onSelectDestination={handleSelectDestination} />
-            <Pricing />
-            <FAQ />
-          </main>
-        </>
-      )}
+        <Route path="/country-details/:id" element={<CountryDetails />} />
+      </Routes>
       <Footer />
     </div>
   );

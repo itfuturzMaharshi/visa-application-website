@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Reveal from "./Reveal";
 import CountryListService from "../services/coutryList/countryList.services";
 
@@ -332,7 +333,8 @@ const buildCountryDetail = (country, index) => {
   };
 };
 
-const Destinations = ({ onSelectDestination }) => {
+const Destinations = () => {
+  const navigate = useNavigate();
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -377,8 +379,9 @@ const Destinations = ({ onSelectDestination }) => {
   }, [countries]);
 
   const handleDestinationSelect = (destination) => {
-    if (typeof onSelectDestination === "function") {
-      onSelectDestination(destination);
+    const countryId = destination.key;
+    if (countryId) {
+      navigate(`/country-details/${countryId}`);
       window?.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
