@@ -1,22 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
-const dialCodes = [
-  { code: "+1", label: "US / CA" },
-  { code: "+44", label: "UK" },
-  { code: "+65", label: "SG" },
-  { code: "+91", label: "IN" },
-  { code: "+971", label: "UAE" },
-];
+import Swal from "sweetalert2";
+import AuthService from "../services/auth/auth.services";
+import CountryCodeSelect from "../components/CountryCodeSelect";
+import Loader from "../components/Loader";
 
 const Login = () => {
   const [countryCode, setCountryCode] = useState("+1");
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState("request");
   const [otpValues, setOtpValues] = useState(["", "", "", ""]);
-  const [status, setStatus] = useState(null);
   const [timer, setTimer] = useState(0);
   const [errors, setErrors] = useState({ phone: "", otp: "" });
+  const [loading, setLoading] = useState(false);
   const otpRefs = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,7 +27,7 @@ const Login = () => {
     return () => clearTimeout(id);
   }, [step, timer]);
 
-  const handleSendOtp = (event) => {
+  const handleSendOtp = async (event) => {
     event.preventDefault();
     const cleanedPhone = phone.replace(/\s|-/g, "");
     if (!/^\d{7,15}$/.test(cleanedPhone)) {
@@ -39,21 +35,50 @@ const Login = () => {
         ...prev,
         phone: "Enter a valid phone number (7-15 digits).",
       }));
-      setStatus({
-        type: "error",
-        message: "Phone number is required to send OTP.",
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Phone Number",
+        text: "Please enter a valid phone number (7-15 digits).",
+        confirmButtonColor: "#0f172a",
       });
       return;
     }
     setErrors((prev) => ({ ...prev, phone: "" }));
-    setStep("verify");
-    setTimer(45);
-    setStatus({
-      type: "success",
-      message: `Secure code sent to ${countryCode} ${phone}.`,
-    });
-    setOtpValues(["", "", "", ""]);
-    otpRefs.current[0]?.focus();
+    setLoading(true);
+
+    try {
+      const response = await AuthService.login({
+        mobile_number: cleanedPhone,
+        countryCode: countryCode.replace("+", ""),
+        machineId: localStorage.getItem("machineId") || "",
+        fcm: localStorage.getItem("fcm") || "",
+      });
+
+      const responseData = response?.data?.data || response?.data;
+      if (response?.success || responseData?.requiresOtp) {
+        setStep("verify");
+        setTimer(45);
+        setOtpValues(["", "", "", ""]);
+        otpRefs.current[0]?.focus();
+        await Swal.fire({
+          icon: "success",
+          title: "OTP Sent!",
+          text: `Secure code sent to ${countryCode} ${phone}.`,
+          confirmButtonColor: "#0f172a",
+        });
+      }
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message || "Failed to send OTP. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "Failed to Send OTP",
+        text: errorMessage,
+        confirmButtonColor: "#0f172a",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOtpChange = (value, index) => {
@@ -75,35 +100,105 @@ const Login = () => {
     }
   };
 
-  const handleVerifyOtp = (event) => {
+  const handleVerifyOtp = async (event) => {
     event.preventDefault();
     if (otpValues.some((digit) => !/^\d$/.test(digit))) {
       setErrors((prev) => ({
         ...prev,
         otp: "Enter all four digits from the OTP.",
       }));
-      setStatus({
-        type: "error",
-        message: "OTP verification failed. Please check the digits.",
+      Swal.fire({
+        icon: "error",
+        title: "Invalid OTP",
+        text: "Please enter all four digits from the OTP.",
+        confirmButtonColor: "#0f172a",
       });
       return;
     }
-    localStorage.setItem("token", "demo-session-token");
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        name: "Visa Explorer",
-        phone: `${countryCode} ${phone}`,
-      })
-    );
-    setStatus({
-      type: "success",
-      message: "OTP verified. Redirecting to your workspace...",
-    });
-    setTimeout(() => navigate(returnTo || "/"), 800);
+
+    const cleanedPhone = phone.replace(/\s|-/g, "");
+    const otp = otpValues.join("");
+    setLoading(true);
+
+    try {
+      const response = await AuthService.verifyOtp({
+        mobile_number: cleanedPhone,
+        otp,
+        machineId: localStorage.getItem("machineId") || "",
+        fcm: localStorage.getItem("fcm") || "",
+      });
+
+      const responseData = response?.data?.data || response?.data;
+      if (response?.success && responseData?.token && responseData?.user) {
+        localStorage.setItem("token", responseData.token);
+        localStorage.setItem("user", JSON.stringify(responseData.user));
+        await Swal.fire({
+          icon: "success",
+          title: "Login Successful!",
+          text: "OTP verified. Redirecting to your workspace...",
+          confirmButtonColor: "#0f172a",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        navigate(returnTo || "/");
+      }
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        otp: "Invalid or expired OTP. Please try again.",
+      }));
+      const errorMessage =
+        error?.response?.data?.message || "Invalid or expired OTP. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "OTP Verification Failed",
+        text: errorMessage,
+        confirmButtonColor: "#0f172a",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canResend = timer === 0 && step === "verify";
+
+  const handleResendOtp = async () => {
+    const cleanedPhone = phone.replace(/\s|-/g, "");
+    if (!/^\d{7,15}$/.test(cleanedPhone)) {
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const response = await AuthService.resendOtp({
+        mobile_number: cleanedPhone,
+        countryCode: countryCode.replace("+", ""),
+      });
+
+      if (response?.success) {
+        setTimer(45);
+        setOtpValues(["", "", "", ""]);
+        otpRefs.current[0]?.focus();
+        await Swal.fire({
+          icon: "success",
+          title: "OTP Resent!",
+          text: `OTP resent to ${countryCode} ${phone}.`,
+          confirmButtonColor: "#0f172a",
+        });
+      }
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message || "Failed to resend OTP. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "Failed to Resend OTP",
+        text: errorMessage,
+        confirmButtonColor: "#0f172a",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 text-slate-900 sm:px-6 lg:px-8">
@@ -121,17 +216,12 @@ const Login = () => {
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="text-sm font-medium text-slate-700 sm:col-span-1">
               Country code
-              <select
-                value={countryCode}
-                onChange={(event) => setCountryCode(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                {dialCodes.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.code} · {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-2">
+                <CountryCodeSelect
+                  value={countryCode}
+                  onChange={setCountryCode}
+                />
+              </div>
             </label>
             <label className="text-sm font-medium text-slate-700 sm:col-span-2">
               Phone number
@@ -157,10 +247,18 @@ const Login = () => {
           {step === "request" && (
             <button
               type="button"
-              className="w-full rounded-2xl bg-slate-900 px-6 py-3 text-base font-semibold text-white transition hover:bg-slate-700"
+              className="relative w-full rounded-2xl bg-slate-900 px-6 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={handleSendOtp}
+              disabled={loading}
             >
-              Send OTP
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <Loader size="md" className="mr-2" />
+                  Sending...
+                </span>
+              ) : (
+                "Send OTP"
+              )}
             </button>
           )}
           {step === "verify" && (
@@ -192,9 +290,9 @@ const Login = () => {
                 ) : (
                   <button
                     type="button"
-                    className="font-semibold text-slate-900 underline-offset-4 hover:underline"
-                    disabled={!canResend}
-                    onClick={handleSendOtp}
+                    className="font-semibold text-slate-900 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!canResend || loading}
+                    onClick={handleResendOtp}
                   >
                     Resend code
                   </button>
@@ -202,10 +300,18 @@ const Login = () => {
               </div>
               <button
                 type="button"
-                className="mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 text-base font-semibold text-white transition hover:bg-emerald-600"
+                className="relative mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 text-base font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleVerifyOtp}
+                disabled={loading}
               >
-                Verify & Continue
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <Loader size="md" className="mr-2" />
+                    
+                  </span>
+                ) : (
+                  "Verify & Continue"
+                )}
               </button>
               {errors.otp && (
                 <p className="mt-3 text-center text-xs text-rose-600">
@@ -213,17 +319,6 @@ const Login = () => {
                 </p>
               )}
             </div>
-          )}
-          {status && (
-            <p
-              className={`rounded-2xl border px-4 py-3 text-sm ${
-                status.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border-rose-200 bg-rose-50 text-rose-700"
-              }`}
-            >
-              {status.message}
-            </p>
           )}
           <p className="text-center text-sm text-slate-500">
             Need an account?{" "}

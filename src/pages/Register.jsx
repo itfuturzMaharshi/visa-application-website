@@ -1,14 +1,9 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-
-const dialCodes = [
-  { code: "+1", label: "United States / Canada" },
-  { code: "+44", label: "United Kingdom" },
-  { code: "+61", label: "Australia" },
-  { code: "+65", label: "Singapore" },
-  { code: "+91", label: "India" },
-  { code: "+971", label: "United Arab Emirates" },
-];
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import AuthService from "../services/auth/auth.services";
+import CountryCodeSelect from "../components/CountryCodeSelect";
+import Loader from "../components/Loader";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -18,8 +13,13 @@ const Register = () => {
     phone: "",
     password: "",
   });
-  const [status, setStatus] = useState(null);
+  const [step, setStep] = useState("register");
+  const [otpValues, setOtpValues] = useState(["", "", "", ""]);
+  const [timer, setTimer] = useState(0);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const otpRefs = useRef([]);
+  const navigate = useNavigate();
   const isFormComplete = useMemo(
     () =>
       formData.name &&
@@ -28,6 +28,12 @@ const Register = () => {
       formData.password.length >= 8,
     [formData]
   );
+
+  useEffect(() => {
+    if (step !== "verify" || timer === 0) return undefined;
+    const id = setTimeout(() => setTimer((prev) => Math.max(prev - 1, 0)), 1000);
+    return () => clearTimeout(id);
+  }, [step, timer]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -57,23 +63,182 @@ const Register = () => {
     setErrors((prev) => ({ ...prev, [name]: fieldErrors[name] }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const validationResult = validate();
     setErrors(validationResult);
 
     if (Object.keys(validationResult).length > 0) {
-      setStatus({
-        type: "error",
-        message: "Please fix the highlighted fields.",
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please fix the highlighted fields.",
+        confirmButtonColor: "#0f172a",
       });
       return;
     }
-    setStatus({
-      type: "success",
-      message:
-        "Registration details captured. A concierge will reach out within 24 hours.",
-    });
+
+    const cleanedPhone = formData.phone.replace(/\s|-/g, "");
+    setLoading(true);
+
+    try {
+      const response = await AuthService.register({
+        fullName: formData.name,
+        email: formData.email,
+        password: formData.password,
+        mobile_number: cleanedPhone,
+        countryCode: formData.countryCode.replace("+", ""),
+        machineId: localStorage.getItem("machineId") || "",
+        fcm: localStorage.getItem("fcm") || "",
+      });
+
+      // Registration is successful - OTP is sent, show verification step
+      const responseData = response?.data?.data || response?.data;
+      if (response?.success || responseData?.requiresOtp) {
+        // Show success message and switch to OTP verification step
+        await Swal.fire({
+          icon: "success",
+          title: "OTP Sent!",
+          text: `Secure code sent to ${formData.countryCode} ${formData.phone}.`,
+          confirmButtonColor: "#0f172a",
+        });
+        // Switch to OTP verification step
+        setStep("verify");
+        setTimer(45);
+        setOtpValues(["", "", "", ""]);
+        otpRefs.current[0]?.focus();
+      }
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message || "Registration failed. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "Registration Failed",
+        text: errorMessage,
+        confirmButtonColor: "#0f172a",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (value, index) => {
+    if (!/^\d?$/.test(value)) return;
+    const updated = [...otpValues];
+    updated[index] = value;
+    setOtpValues(updated);
+    if (errors.otp) {
+      setErrors((prev) => ({ ...prev, otp: "" }));
+    }
+    if (value && index < otpValues.length - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (event, index) => {
+    if (event.key === "Backspace" && !otpValues[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async (event) => {
+    event.preventDefault();
+    if (otpValues.some((digit) => !/^\d$/.test(digit))) {
+      setErrors((prev) => ({
+        ...prev,
+        otp: "Enter all four digits from the OTP.",
+      }));
+      Swal.fire({
+        icon: "error",
+        title: "Invalid OTP",
+        text: "Please enter all four digits from the OTP.",
+        confirmButtonColor: "#0f172a",
+      });
+      return;
+    }
+
+    const cleanedPhone = formData.phone.replace(/\s|-/g, "");
+    const otp = otpValues.join("");
+    setLoading(true);
+
+    try {
+      const response = await AuthService.verifyOtp({
+        mobile_number: cleanedPhone,
+        otp,
+        machineId: localStorage.getItem("machineId") || "",
+        fcm: localStorage.getItem("fcm") || "",
+      });
+
+      const responseData = response?.data?.data || response?.data;
+      if (response?.success && responseData?.token && responseData?.user) {
+        localStorage.setItem("token", responseData.token);
+        localStorage.setItem("user", JSON.stringify(responseData.user));
+        await Swal.fire({
+          icon: "success",
+          title: "Registration Complete!",
+          text: "Your account has been verified successfully. Redirecting...",
+          confirmButtonColor: "#0f172a",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        otp: "Invalid or expired OTP. Please try again.",
+      }));
+      const errorMessage =
+        error?.response?.data?.message || "Invalid or expired OTP. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "OTP Verification Failed",
+        text: errorMessage,
+        confirmButtonColor: "#0f172a",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canResend = timer === 0 && step === "verify";
+
+  const handleResendOtp = async () => {
+    const cleanedPhone = formData.phone.replace(/\s|-/g, "");
+    if (!/^\d{7,15}$/.test(cleanedPhone)) {
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const response = await AuthService.resendOtp({
+        mobile_number: cleanedPhone,
+        countryCode: formData.countryCode.replace("+", ""),
+      });
+
+      if (response?.success) {
+        setTimer(45);
+        setOtpValues(["", "", "", ""]);
+        otpRefs.current[0]?.focus();
+        await Swal.fire({
+          icon: "success",
+          title: "OTP Resent!",
+          text: `OTP resent to ${formData.countryCode} ${formData.phone}.`,
+          confirmButtonColor: "#0f172a",
+        });
+      }
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message || "Failed to resend OTP. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "Failed to Resend OTP",
+        text: errorMessage,
+        confirmButtonColor: "#0f172a",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -109,9 +274,11 @@ const Register = () => {
           <p className="text-sm text-slate-500">
             All fields are required unless stated otherwise.
           </p>
-          <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-            <label className="block text-sm font-medium text-slate-700">
-              User Name
+          <form className="mt-6 space-y-5" onSubmit={step === "register" ? handleSubmit : handleVerifyOtp}>
+            {step === "register" && (
+              <>
+                <label className="block text-sm font-medium text-slate-700">
+                  User Name
               <input
                 type="text"
                 name="name"
@@ -149,18 +316,14 @@ const Register = () => {
                 Country code & phone number
               </span>
               <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                <select
-                  name="countryCode"
-                  value={formData.countryCode}
-                  onChange={handleChange}
-                  className="rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none sm:w-1/3"
-                >
-                  {dialCodes.map((option) => (
-                    <option key={option.code} value={option.code}>
-                      {option.code} · {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="sm:w-1/3">
+                  <CountryCodeSelect
+                    value={formData.countryCode}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, countryCode: value }))
+                    }
+                  />
+                </div>
                 <input
                   type="tel"
                   name="phone"
@@ -198,23 +361,19 @@ const Register = () => {
                 </span>
               )}
             </label>
-            {status && (
-              <p
-                className={`rounded-2xl border px-4 py-3 text-sm ${
-                  status.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-rose-200 bg-rose-50 text-rose-700"
-                }`}
-              >
-                {status.message}
-              </p>
-            )}
             <button
               type="submit"
-              className="w-full rounded-2xl bg-slate-900 px-6 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!isFormComplete}
+              className="relative w-full rounded-2xl bg-slate-900 px-6 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!isFormComplete || loading}
             >
-              Create Account
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <Loader size="md" className="mr-2" />
+                  
+                </span>
+              ) : (
+                "Create Account"
+              )}
             </button>
             <p className="text-center text-sm text-slate-500">
               Already registered?{" "}
@@ -225,6 +384,66 @@ const Register = () => {
                 Log in
               </Link>
             </p>
+              </>
+            )}
+            {step === "verify" && (
+              <div className="rounded-2xl border border-slate-200 p-6">
+                <p className="text-sm font-medium text-slate-700">
+                  Enter the 4-digit OTP
+                </p>
+                <p className="text-xs text-slate-500">
+                  Sent to {formData.countryCode} {formData.phone}
+                </p>
+                <div className="mt-4 flex justify-center gap-3">
+                  {otpValues.map((digit, index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(event) => handleOtpChange(event.target.value, index)}
+                      onKeyDown={(event) => handleKeyDown(event, index)}
+                      ref={(element) => (otpRefs.current[index] = element)}
+                      className="h-12 w-12 rounded-2xl border border-slate-200 text-center text-xl font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                    />
+                  ))}
+                </div>
+                <div className="mt-4 text-center text-sm text-slate-500">
+                  {timer > 0 ? (
+                    <span>Resend code in {timer}s</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="font-semibold text-slate-900 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={!canResend || loading}
+                      onClick={handleResendOtp}
+                    >
+                      Resend code
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="relative mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 text-base font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <Loader size="md" className="mr-2" />
+                      
+                    </span>
+                  ) : (
+                    "Verify & Continue"
+                  )}
+                </button>
+                {errors.otp && (
+                  <p className="mt-3 text-center text-xs text-rose-600">
+                    {errors.otp}
+                  </p>
+                )}
+              </div>
+            )}
           </form>
         </div>
       </div>

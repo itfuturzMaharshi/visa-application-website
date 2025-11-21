@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthService from "../services/auth/auth.services";
 
 const navLinks = [
   { label: "Home", to: "/" },
@@ -20,7 +21,9 @@ const HeaderUserMenu = ({ onNavigate }) => {
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
-        if (parsed?.name) {
+        if (parsed?.fullName) {
+          setUserName(parsed.fullName);
+        } else if (parsed?.name) {
           setUserName(parsed.name);
         }
       } catch {
@@ -53,12 +56,19 @@ const HeaderUserMenu = ({ onNavigate }) => {
     onNavigate?.();
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
     setOpen(false);
-    navigate("/login");
-    onNavigate?.();
+    try {
+      await AuthService.logout();
+    } catch (error) {
+      // Continue with logout even if API call fails
+      console.error("Logout API error:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+      onNavigate?.();
+    }
   };
 
   return (
