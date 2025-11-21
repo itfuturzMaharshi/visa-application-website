@@ -7,7 +7,11 @@ import DocumentsSection from "./DocumentsSection";
 import FeesSection from "./FeesSection";
 import StepsSection from "./StepsSection";
 import FaqSection from "./FaqSection";
+import TripPurposeModal from "./TripPurposeModal";
+import ChecklistModal from "./ChecklistModal";
 import CountryDetailsService from "../../services/coutryList/countryDetails.services";
+import TripPurposeService from "../../services/tripPurpose/tripPurpose.services";
+import CountryChecklistService from "../../services/countryCheckList/countryCheckList.services";
 
 const assetUrl = (path) => {
   if (!path) return "";
@@ -32,6 +36,16 @@ const CountryDetails = () => {
   const [activeCategory, setActiveCategory] = useState("");
   const [activeFaqCategory, setActiveFaqCategory] = useState("general");
   const [openFaq, setOpenFaq] = useState(null);
+  const [purposeModalOpen, setPurposeModalOpen] = useState(false);
+  const [purposeLoading, setPurposeLoading] = useState(false);
+  const [purposeError, setPurposeError] = useState("");
+  const [purposeOptions, setPurposeOptions] = useState([]);
+  const [selectedPurpose, setSelectedPurpose] = useState(null);
+  const [applyButtonLoading, setApplyButtonLoading] = useState(false);
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistError, setChecklistError] = useState("");
+  const [checklistData, setChecklistData] = useState(null);
 
   useEffect(() => {
     const fetchCountryDetails = async () => {
@@ -65,7 +79,25 @@ const CountryDetails = () => {
               title: purpose.name,
               heading: purpose.description,
               summary: purpose.description,
-              requirements: [],
+              requirements: (purpose.checklistItems || []).map(
+                (item, itemIndex) => {
+                  const source = item?.checklistItem || item || {};
+                  return {
+                    id:
+                      source._id ||
+                      item?._id ||
+                      `${purpose.code}-${itemIndex}`,
+                    title:
+                      source.title ||
+                      item?.title ||
+                      `Document ${itemIndex + 1}`,
+                    description:
+                      source.description ||
+                      item?.description ||
+                      "Detailed instructions will be provided by your strategist.",
+                  };
+                }
+              ),
               stats: [
                 {
                   label: "Processing window",
@@ -223,9 +255,93 @@ const CountryDetails = () => {
     );
   }
 
+  const handlePurposeFetch = async () => {
+    if (!countryData?._id || applyButtonLoading) return;
+    setApplyButtonLoading(true);
+    setPurposeError("");
+    setPurposeOptions([]);
+    setSelectedPurpose(null);
+
+    try {
+      setPurposeLoading(true);
+      const response = await TripPurposeService.list({
+        countryId: countryData._id,
+      });
+      const payload = response?.data?.docs || response?.data || [];
+      const normalized = Array.isArray(payload)
+        ? payload
+        : payload
+        ? [payload]
+        : [];
+      setPurposeOptions(normalized);
+      if (!normalized.length) {
+        setPurposeError("Trip purposes are not available for this country.");
+      }
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Unable to load trip purposes right now.";
+      setPurposeError(message);
+    } finally {
+      setApplyButtonLoading(false);
+      setPurposeLoading(false);
+      setPurposeModalOpen(true);
+    }
+  };
+
+  const handlePurposeSelect = (purpose) => {
+    setSelectedPurpose(purpose);
+    setPurposeModalOpen(false);
+    if (!purpose?._id) return;
+    fetchChecklist(purpose);
+  };
+
+  const fetchChecklist = async (purpose) => {
+    setChecklistModalOpen(true);
+    setChecklistLoading(true);
+    setChecklistError("");
+    setChecklistData(null);
+    try {
+      const response = await CountryChecklistService.getChecklist({
+        countryId: countryData._id,
+        tripPurposeId: purpose._id,
+      });
+      const data = response?.data;
+      setChecklistData({
+        tripPurpose: data?.tripPurpose,
+        items: data?.items || [],
+      });
+      if (!data?.items?.length) {
+        setChecklistError(
+          "Checklist not configured for this country and purpose."
+        );
+      }
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Unable to fetch checklist at the moment.";
+      setChecklistError(message);
+    } finally {
+      setChecklistLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setPurposeModalOpen(false);
+  };
+
+  const closeChecklistModal = () => {
+    setChecklistModalOpen(false);
+  };
+
   return (
     <div className="relative bg-[#030920] text-white">
-      <HeroSection country={countryData} onBack={handleBack} />
+      <HeroSection
+        country={countryData}
+        onBack={handleBack}
+        onApply={handlePurposeFetch}
+        applyLoading={applyButtonLoading}
+      />
       <OverviewSection country={countryData} />
       <VisaCategoriesSection
         visaCategories={countryData.visaCategories}
@@ -241,6 +357,23 @@ const CountryDetails = () => {
         activeCategory={activeFaqCategory}
         onCategoryChange={setActiveFaqCategory}
         categories={faqCategories}
+      />
+      <TripPurposeModal
+        open={purposeModalOpen}
+        countryName={countryData.country}
+        loading={applyButtonLoading || purposeLoading}
+        error={purposeError}
+        options={purposeOptions}
+        onSelect={handlePurposeSelect}
+        onClose={closeModal}
+        assetUrl={assetUrl}
+      />
+      <ChecklistModal
+        open={checklistModalOpen}
+        loading={checklistLoading}
+        error={checklistError}
+        checklist={checklistData}
+        onClose={closeChecklistModal}
       />
     </div>
   );

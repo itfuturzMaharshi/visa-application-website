@@ -1,4 +1,4 @@
-const HeroSection = ({ country, onBack }) => (
+const HeroSection = ({ country, onBack, onApply, applyLoading }) => (
   <section className="relative isolate overflow-hidden">
     <img
       src={country.heroImage}
@@ -18,9 +18,15 @@ const HeroSection = ({ country, onBack }) => (
           </h1>
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-full bg-linear-to-r from-emerald-400 to-blue-500 px-8 py-3 text-base font-semibold text-slate-950 shadow-[0_25px_45px_rgba(16,185,129,0.35)] transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-200"
+            onClick={onApply}
+            disabled={applyLoading}
+            className="inline-flex h-12 w-56 items-center justify-center rounded-full bg-linear-to-r from-emerald-400 to-blue-500 px-8 py-3 text-base font-semibold text-slate-950 shadow-[0_25px_45px_rgba(16,185,129,0.35)] transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Apply for Visa Now
+            {applyLoading ? (
+              <span className="inline-flex h-5 w-5 animate-spin rounded-full border-2 border-slate-950/40 border-t-slate-950" />
+            ) : (
+              "Apply for Visa Now"
+            )}
           </button>
         </div>
       </div>
