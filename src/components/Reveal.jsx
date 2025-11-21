@@ -7,17 +7,8 @@ const animationStyles = {
   "slide-left": "-translate-x-6",
 };
 
-const Reveal = forwardRef(
-  (
-    {
-      as: Component = "div",
-      animation = "fade-up",
-      delay = 0,
-      className = "",
-      children,
-    },
-    passedRef
-  ) => {
+const Reveal = forwardRef(({ as, animation = "fade-up", delay = 0, className = "", children }, passedRef) => {
+    const ComponentTag = as || "div";
     const { ref, isIntersecting } = useInView();
     const resolvedRef = passedRef || ref;
 
@@ -29,13 +20,13 @@ const Reveal = forwardRef(
       : "";
 
     return (
-      <Component
+      <ComponentTag
         ref={resolvedRef}
         style={{ transitionDelay: `${delay}ms` }}
         className={`opacity-0 transition-all duration-700 ease-out ${hiddenState} ${visibleState} ${className}`}
       >
         {children}
-      </Component>
+      </ComponentTag>
     );
   }
 );
