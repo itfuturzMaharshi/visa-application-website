@@ -6,6 +6,9 @@ import Pricing from "./components/Pricing";
 import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
 import CountryDetails from "./components/countryDetails/CountryDetails";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
+import UserDetails from "./pages/UserDetails";
 
 function App() {
   return (
@@ -26,6 +29,9 @@ function App() {
           }
         />
         <Route path="/country-details/:id" element={<CountryDetails />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/user-details" element={<UserDetails />} />
       </Routes>
       <Footer />
     </div>
