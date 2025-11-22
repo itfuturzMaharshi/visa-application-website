@@ -14,7 +14,7 @@ export interface UserProfileData {
   email: string;
   countryCode: string;
   mobile_number: string;
-  date_of_birth?: string;
+  date_of_birth?: string | Date;
   gender?: 'male' | 'female' | 'other';
   profilePic?: string;
   city?: string;
@@ -29,8 +29,8 @@ export interface UserProfileData {
   passportInfo?: {
     passportNumber: string;
     nationality: string;
-    issueDate?: string;
-    expiryDate?: string;
+    issueDate?: string | Date;
+    expiryDate?: string | Date;
     placeOfIssue: string;
     passportFrontImage?: string;
     passportBackImage?: string;
@@ -39,9 +39,12 @@ export interface UserProfileData {
   isVerified: boolean;
   active: boolean;
   isSubscribed: boolean;
-  lastLogin?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  isDeleted?: boolean;
+  lastLogin?: string | Date;
+  machineId?: string;
+  fcm?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface UpdateProfileRequest {
