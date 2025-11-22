@@ -11,7 +11,14 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
   const imageRef = useRef(null);
   const containerRef = useRef(null);
   const [cropArea, setCropArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0, displayWidth: 0, displayHeight: 0, offsetX: 0, offsetY: 0 });
+  const [imageSize, setImageSize] = useState({
+    width: 0,
+    height: 0,
+    displayWidth: 0,
+    displayHeight: 0,
+    offsetX: 0,
+    offsetY: 0,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
@@ -25,8 +32,11 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
         const containerHeight = container.offsetHeight;
         const imgAspect = img.naturalWidth / img.naturalHeight;
         const containerAspect = containerWidth / containerHeight;
-        
-        let displayWidth, displayHeight, offsetX = 0, offsetY = 0;
+
+        let displayWidth,
+          displayHeight,
+          offsetX = 0,
+          offsetY = 0;
         if (imgAspect > containerAspect) {
           displayHeight = containerHeight;
           displayWidth = displayHeight * imgAspect;
@@ -36,7 +46,7 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
           displayHeight = displayWidth / imgAspect;
           offsetY = (containerHeight - displayHeight) / 2;
         }
-        
+
         setImageSize({
           width: img.naturalWidth,
           height: img.naturalHeight,
@@ -62,7 +72,10 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
   }, [imageSrc]);
 
   const handleMouseDown = (e) => {
-    if (e.target === containerRef.current || e.target.closest('.crop-overlay')) {
+    if (
+      e.target === containerRef.current ||
+      e.target.closest(".crop-overlay")
+    ) {
       setIsDragging(true);
       const rect = containerRef.current.getBoundingClientRect();
       setDragStart({
@@ -77,18 +90,20 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
       const rect = containerRef.current.getBoundingClientRect();
       const newX = e.clientX - dragStart.x - rect.left;
       const newY = e.clientY - dragStart.y - rect.top;
-      
+
       // Calculate scaled image bounds
       const scaledDisplayWidth = imageSize.displayWidth * scale;
       const scaledDisplayHeight = imageSize.displayHeight * scale;
-      const scaledOffsetX = imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2;
-      const scaledOffsetY = imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2;
-      
+      const scaledOffsetX =
+        imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2;
+      const scaledOffsetY =
+        imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2;
+
       // Constrain to scaled image bounds
       const maxX = scaledOffsetX + scaledDisplayWidth - cropArea.width;
       const maxY = scaledOffsetY + scaledDisplayHeight - cropArea.height;
-      
-      setCropArea(prev => ({
+
+      setCropArea((prev) => ({
         ...prev,
         x: Math.max(scaledOffsetX, Math.min(newX, maxX)),
         y: Math.max(scaledOffsetY, Math.min(newY, maxY)),
@@ -106,20 +121,22 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
     const startX = e.clientX;
     const startY = e.clientY;
     const startCrop = { ...cropArea };
-    
+
     // Calculate scaled image bounds
     const scaledDisplayWidth = imageSize.displayWidth * scale;
     const scaledDisplayHeight = imageSize.displayHeight * scale;
-    const scaledOffsetX = imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2;
-    const scaledOffsetY = imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2;
-    
+    const scaledOffsetX =
+      imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2;
+    const scaledOffsetY =
+      imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2;
+
     const handleResizeMove = (moveE) => {
       const deltaX = moveE.clientX - startX;
       const deltaY = moveE.clientY - startY;
-      
+
       let newCrop = { ...startCrop };
-      
-      if (corner.includes('n')) {
+
+      if (corner.includes("n")) {
         const newHeight = startCrop.height - deltaY;
         const newY = startCrop.y + deltaY;
         if (newHeight > 50 && newY >= scaledOffsetY) {
@@ -127,13 +144,16 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
           newCrop.y = newY;
         }
       }
-      if (corner.includes('s')) {
+      if (corner.includes("s")) {
         const newHeight = startCrop.height + deltaY;
-        if (newHeight > 50 && startCrop.y + newHeight <= scaledOffsetY + scaledDisplayHeight) {
+        if (
+          newHeight > 50 &&
+          startCrop.y + newHeight <= scaledOffsetY + scaledDisplayHeight
+        ) {
           newCrop.height = newHeight;
         }
       }
-      if (corner.includes('w')) {
+      if (corner.includes("w")) {
         const newWidth = startCrop.width - deltaX;
         const newX = startCrop.x + deltaX;
         if (newWidth > 50 && newX >= scaledOffsetX) {
@@ -141,52 +161,79 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
           newCrop.x = newX;
         }
       }
-      if (corner.includes('e')) {
+      if (corner.includes("e")) {
         const newWidth = startCrop.width + deltaX;
-        if (newWidth > 50 && startCrop.x + newWidth <= scaledOffsetX + scaledDisplayWidth) {
+        if (
+          newWidth > 50 &&
+          startCrop.x + newWidth <= scaledOffsetX + scaledDisplayWidth
+        ) {
           newCrop.width = newWidth;
         }
       }
-      
+
       // Constrain to scaled image bounds
-      newCrop.x = Math.max(scaledOffsetX, Math.min(newCrop.x, scaledOffsetX + scaledDisplayWidth - newCrop.width));
-      newCrop.y = Math.max(scaledOffsetY, Math.min(newCrop.y, scaledOffsetY + scaledDisplayHeight - newCrop.height));
-      newCrop.width = Math.min(newCrop.width, scaledOffsetX + scaledDisplayWidth - newCrop.x);
-      newCrop.height = Math.min(newCrop.height, scaledOffsetY + scaledDisplayHeight - newCrop.y);
-      
+      newCrop.x = Math.max(
+        scaledOffsetX,
+        Math.min(newCrop.x, scaledOffsetX + scaledDisplayWidth - newCrop.width)
+      );
+      newCrop.y = Math.max(
+        scaledOffsetY,
+        Math.min(
+          newCrop.y,
+          scaledOffsetY + scaledDisplayHeight - newCrop.height
+        )
+      );
+      newCrop.width = Math.min(
+        newCrop.width,
+        scaledOffsetX + scaledDisplayWidth - newCrop.x
+      );
+      newCrop.height = Math.min(
+        newCrop.height,
+        scaledOffsetY + scaledDisplayHeight - newCrop.y
+      );
+
       setCropArea(newCrop);
     };
-    
+
     const handleResizeUp = () => {
-      document.removeEventListener('mousemove', handleResizeMove);
-      document.removeEventListener('mouseup', handleResizeUp);
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", handleResizeUp);
     };
-    
-    document.addEventListener('mousemove', handleResizeMove);
-    document.addEventListener('mouseup', handleResizeUp);
+
+    document.addEventListener("mousemove", handleResizeMove);
+    document.addEventListener("mouseup", handleResizeUp);
   };
 
   const getCroppedImage = () => {
-    if (!imageRef.current || !canvasRef.current || !imageSize.width) return null;
+    if (!imageRef.current || !canvasRef.current || !imageSize.width)
+      return null;
 
     const img = imageRef.current;
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
 
     // Calculate the actual displayed image position accounting for scale
     const scaledDisplayWidth = imageSize.displayWidth * scale;
     const scaledDisplayHeight = imageSize.displayHeight * scale;
-    const scaledOffsetX = imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2;
-    const scaledOffsetY = imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2;
+    const scaledOffsetX =
+      imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2;
+    const scaledOffsetY =
+      imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2;
 
     // Calculate crop coordinates in image pixel space
     const scaleX = imageSize.width / scaledDisplayWidth;
     const scaleY = imageSize.height / scaledDisplayHeight;
-    
+
     const cropX = Math.max(0, (cropArea.x - scaledOffsetX) * scaleX);
     const cropY = Math.max(0, (cropArea.y - scaledOffsetY) * scaleY);
-    const cropWidth = Math.min(imageSize.width - cropX, cropArea.width * scaleX);
-    const cropHeight = Math.min(imageSize.height - cropY, cropArea.height * scaleY);
+    const cropWidth = Math.min(
+      imageSize.width - cropX,
+      cropArea.width * scaleX
+    );
+    const cropHeight = Math.min(
+      imageSize.height - cropY,
+      cropArea.height * scaleY
+    );
 
     // Set canvas size to match crop area
     canvas.width = cropArea.width;
@@ -195,11 +242,17 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
     // Draw cropped portion, scaling to fit canvas
     ctx.drawImage(
       img,
-      cropX, cropY, cropWidth, cropHeight,
-      0, 0, cropArea.width, cropArea.height
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      cropArea.width,
+      cropArea.height
     );
 
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL("image/jpeg", 0.92);
   };
 
   const handleCrop = () => {
@@ -211,7 +264,7 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -222,15 +275,29 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Crop Your Image</h3>
-            <p className="text-sm text-slate-600">Drag to move, resize corners to adjust crop area</p>
+            <h3 className="text-lg font-semibold text-slate-900">
+              Crop Your Image
+            </h3>
+            <p className="text-sm text-slate-600">
+              Drag to move, resize corners to adjust crop area
+            </p>
           </div>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -252,8 +319,14 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
                   style={{
                     width: `${imageSize.displayWidth * scale}px`,
                     height: `${imageSize.displayHeight * scale}px`,
-                    left: `${imageSize.offsetX - (imageSize.displayWidth * (scale - 1)) / 2}px`,
-                    top: `${imageSize.offsetY - (imageSize.displayHeight * (scale - 1)) / 2}px`,
+                    left: `${
+                      imageSize.offsetX -
+                      (imageSize.displayWidth * (scale - 1)) / 2
+                    }px`,
+                    top: `${
+                      imageSize.offsetY -
+                      (imageSize.displayHeight * (scale - 1)) / 2
+                    }px`,
                   }}
                 />
                 {/* Crop Overlay */}
@@ -304,7 +377,9 @@ const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
                 onChange={(e) => setScale(parseFloat(e.target.value))}
                 className="w-32"
               />
-              <span className="text-sm text-slate-600 w-12">{Math.round(scale * 100)}%</span>
+              <span className="text-sm text-slate-600 w-12">
+                {Math.round(scale * 100)}%
+              </span>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -338,7 +413,7 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
 
   useEffect(() => {
     if (!stream) {
-      console.warn('CameraModal: No stream provided');
+      console.warn("CameraModal: No stream provided");
       setIsReady(false);
       return;
     }
@@ -355,26 +430,32 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
       const currentStream = stream;
 
       if (!video) {
-        console.error('CameraModal: Video element not found in DOM');
+        console.error("CameraModal: Video element not found in DOM");
         setIsReady(false);
         return;
       }
 
-      console.log('Initializing camera video element', {
+      console.log("Initializing camera video element", {
         hasVideo: !!video,
         hasStream: !!currentStream,
         streamActive: currentStream.active,
-        tracks: currentStream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState }))
+        tracks: currentStream
+          .getTracks()
+          .map((t) => ({
+            kind: t.kind,
+            enabled: t.enabled,
+            readyState: t.readyState,
+          })),
       });
 
       setIsReady(false);
-      
+
       // Clear any existing stream first
       if (video.srcObject) {
         const oldStream = video.srcObject;
-        oldStream.getTracks().forEach(track => {
+        oldStream.getTracks().forEach((track) => {
           track.stop();
-          console.log('Stopped old track:', track.kind);
+          console.log("Stopped old track:", track.kind);
         });
         video.srcObject = null;
       }
@@ -382,77 +463,81 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
       // Set the new stream
       try {
         video.srcObject = currentStream;
-        console.log('Stream set to video element successfully');
+        console.log("Stream set to video element successfully");
       } catch (err) {
-        console.error('Error setting stream to video:', err);
+        console.error("Error setting stream to video:", err);
         setIsReady(false);
         return;
       }
-    
+
       // Ensure video is ready
       handleCanPlay = () => {
-        console.log('Video can play event fired');
+        console.log("Video can play event fired");
         if (video) {
-          video.play()
+          video
+            .play()
             .then(() => {
-              console.log('Video playing successfully');
+              console.log("Video playing successfully");
               setIsReady(true);
             })
-            .catch(err => {
-              console.error('Error playing video in canplay handler:', err);
+            .catch((err) => {
+              console.error("Error playing video in canplay handler:", err);
             });
         }
       };
 
       handleLoadedMetadata = () => {
-        console.log('Video metadata loaded:', {
+        console.log("Video metadata loaded:", {
           width: video?.videoWidth,
           height: video?.videoHeight,
           readyState: video?.readyState,
         });
         // Try to play after metadata is loaded
         if (video && video.paused) {
-          video.play()
+          video
+            .play()
             .then(() => {
-              console.log('Video playing after metadata load');
+              console.log("Video playing after metadata load");
               setIsReady(true);
             })
-            .catch(err => console.error('Play error after metadata:', err));
+            .catch((err) => console.error("Play error after metadata:", err));
         }
       };
 
       handlePlaying = () => {
-        console.log('Video is now playing');
+        console.log("Video is now playing");
         setIsReady(true);
       };
 
       handleError = (e) => {
-        console.error('Video error:', e, video?.error);
+        console.error("Video error:", e, video?.error);
       };
 
       // Add event listeners
-      video.addEventListener('canplay', handleCanPlay);
-      video.addEventListener('loadedmetadata', handleLoadedMetadata);
-      video.addEventListener('playing', handlePlaying);
-      video.addEventListener('error', handleError);
+      video.addEventListener("canplay", handleCanPlay);
+      video.addEventListener("loadedmetadata", handleLoadedMetadata);
+      video.addEventListener("playing", handlePlaying);
+      video.addEventListener("error", handleError);
 
       // Try to play immediately
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            console.log('Video playing successfully (immediate)');
+            console.log("Video playing successfully (immediate)");
             setIsReady(true);
           })
-          .catch(err => {
-            console.error('Error playing video (immediate):', err);
+          .catch((err) => {
+            console.error("Error playing video (immediate):", err);
             // Video will play when canplay event fires
           });
       } else {
         // For older browsers
         setTimeout(() => {
           if (video && video.paused) {
-            video.play().catch(err => console.error('Delayed play error:', err));
+            video
+              .play()
+              .catch((err) => console.error("Delayed play error:", err));
           }
         }, 100);
       }
@@ -461,11 +546,17 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
     return () => {
       clearTimeout(timer);
       // Clean up event listeners
-      if (video && handleCanPlay && handleLoadedMetadata && handlePlaying && handleError) {
-        video.removeEventListener('canplay', handleCanPlay);
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        video.removeEventListener('playing', handlePlaying);
-        video.removeEventListener('error', handleError);
+      if (
+        video &&
+        handleCanPlay &&
+        handleLoadedMetadata &&
+        handlePlaying &&
+        handleError
+      ) {
+        video.removeEventListener("canplay", handleCanPlay);
+        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        video.removeEventListener("playing", handlePlaying);
+        video.removeEventListener("error", handleError);
       }
       // Don't stop stream here - let parent handle it
       setIsReady(false);
@@ -478,7 +569,7 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
     const currentStream = stream;
 
     if (!video) {
-      console.error('Video element not found');
+      console.error("Video element not found");
       Swal.fire({
         icon: "error",
         title: "Capture Error",
@@ -489,7 +580,7 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
     }
 
     if (!canvas) {
-      console.error('Canvas element not found');
+      console.error("Canvas element not found");
       Swal.fire({
         icon: "error",
         title: "Capture Error",
@@ -500,7 +591,7 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
     }
 
     if (!currentStream) {
-      console.error('Stream not available');
+      console.error("Stream not available");
       Swal.fire({
         icon: "error",
         title: "Capture Error",
@@ -511,8 +602,13 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
     }
 
     // Check if video has valid dimensions and is playing
-    if (!video.videoWidth || !video.videoHeight || video.videoWidth === 0 || video.videoHeight === 0) {
-      console.warn('Video dimensions not available yet', {
+    if (
+      !video.videoWidth ||
+      !video.videoHeight ||
+      video.videoWidth === 0 ||
+      video.videoHeight === 0
+    ) {
+      console.warn("Video dimensions not available yet", {
         width: video.videoWidth,
         height: video.videoHeight,
         readyState: video.readyState,
@@ -529,9 +625,13 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
 
     // Check if video is actually playing
     if (video.paused || video.ended) {
-      console.warn('Video is not playing', { paused: video.paused, ended: video.ended });
+      console.warn("Video is not playing", {
+        paused: video.paused,
+        ended: video.ended,
+      });
       // Try to play it
-      video.play()
+      video
+        .play()
         .then(() => {
           // Retry capture after a short delay
           setTimeout(() => handleCapture(), 200);
@@ -548,32 +648,32 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
     }
 
     try {
-      const ctx = canvas.getContext('2d');
-      
+      const ctx = canvas.getContext("2d");
+
       // Set canvas dimensions to match video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      
+
       // Draw the current video frame to canvas
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
+
       // Get image data
-      const imageData = canvas.toDataURL('image/jpeg', 0.92);
-      
-      if (!imageData || imageData === 'data:,') {
-        throw new Error('Failed to capture image data');
+      const imageData = canvas.toDataURL("image/jpeg", 0.92);
+
+      if (!imageData || imageData === "data:,") {
+        throw new Error("Failed to capture image data");
       }
-      
+
       // Stop the stream
-      currentStream.getTracks().forEach(track => {
+      currentStream.getTracks().forEach((track) => {
         track.stop();
-        console.log('Stopped track:', track.kind);
+        console.log("Stopped track:", track.kind);
       });
-      
+
       // Call onCapture with the image
       onCapture(imageData);
     } catch (error) {
-      console.error('Capture error:', error);
+      console.error("Capture error:", error);
       Swal.fire({
         icon: "error",
         title: "Capture Failed",
@@ -585,9 +685,9 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
 
   const handleClose = () => {
     if (stream) {
-      stream.getTracks().forEach(track => {
+      stream.getTracks().forEach((track) => {
         track.stop();
-        console.log('Stopped track on close:', track.kind);
+        console.log("Stopped track on close:", track.kind);
       });
     }
     onClose();
@@ -599,22 +699,39 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Capture Photo</h3>
-            <p className="text-sm text-slate-600">Position your passport in the frame</p>
+            <h3 className="text-lg font-semibold text-slate-900">
+              Capture Photo
+            </h3>
+            <p className="text-sm text-slate-600">
+              Position your passport in the frame
+            </p>
           </div>
           <button
             onClick={handleClose}
             className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Camera Preview */}
         <div className="p-6">
-          <div className="relative mx-auto overflow-hidden rounded-xl bg-slate-900" style={{ width: "100%", height: "500px", maxHeight: "70vh" }}>
+          <div
+            className="relative mx-auto overflow-hidden rounded-xl bg-slate-900"
+            style={{ width: "100%", height: "500px", maxHeight: "70vh" }}
+          >
             {stream ? (
               <>
                 <video
@@ -623,14 +740,18 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
                   playsInline
                   muted
                   className="h-full w-full object-contain"
-                  style={{ minHeight: '100%', minWidth: '100%' }}
+                  style={{ minHeight: "100%", minWidth: "100%" }}
                 />
                 {!isReady && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/90">
                     <div className="text-center">
                       <Loader size="lg" className="mx-auto" />
-                      <p className="mt-4 text-sm text-white">Initializing camera...</p>
-                      <p className="mt-2 text-xs text-white/70">Please wait...</p>
+                      <p className="mt-4 text-sm text-white">
+                        Initializing camera...
+                      </p>
+                      <p className="mt-2 text-xs text-white/70">
+                        Please wait...
+                      </p>
                     </div>
                   </div>
                 )}
@@ -639,7 +760,9 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
               <div className="flex h-full items-center justify-center">
                 <div className="text-center">
                   <Loader size="lg" className="mx-auto" />
-                  <p className="mt-4 text-sm text-white">Waiting for camera stream...</p>
+                  <p className="mt-4 text-sm text-white">
+                    Waiting for camera stream...
+                  </p>
                 </div>
               </div>
             )}
@@ -658,11 +781,26 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
               disabled={!isReady}
               className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
-              {isReady ? 'Capture Photo' : 'Initializing...'}
+              {isReady ? "Capture Photo" : "Initializing..."}
             </button>
           </div>
         </div>
@@ -675,30 +813,51 @@ const CameraModal = ({ fieldName, onCapture, onClose, stream }) => {
 };
 
 // Image Preview Modal Component
-const ImagePreviewModal = ({ imageSrc, onCrop, onUploadNew, onClose, source }) => {
+const ImagePreviewModal = ({
+  imageSrc,
+  onCrop,
+  onUploadNew,
+  onClose,
+  source,
+}) => {
   // source can be 'gallery', 'camera', or null
-  const isFromGallery = source === 'gallery';
-  const isFromCamera = source === 'camera';
-  
+  const isFromGallery = source === "gallery";
+  const isFromCamera = source === "camera";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h3 className="text-lg font-semibold text-slate-900">Image Preview</h3>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Image Preview
+          </h3>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Image Preview */}
         <div className="p-6">
-          <div className="relative mx-auto overflow-hidden rounded-xl bg-slate-100" style={{ maxHeight: "60vh" }}>
+          <div
+            className="relative mx-auto overflow-hidden rounded-xl bg-slate-100"
+            style={{ maxHeight: "60vh" }}
+          >
             <img
               src={imageSrc}
               alt="Preview"
@@ -718,8 +877,18 @@ const ImagePreviewModal = ({ imageSrc, onCrop, onUploadNew, onClose, source }) =
               onClick={onCrop}
               className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
               Crop Image
             </button>
@@ -729,16 +898,41 @@ const ImagePreviewModal = ({ imageSrc, onCrop, onUploadNew, onClose, source }) =
             >
               {isFromGallery ? (
                 <>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
                   </svg>
                   Upload New Image
                 </>
               ) : (
                 <>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
                   </svg>
                   Upload New Image
                 </>
@@ -752,13 +946,13 @@ const ImagePreviewModal = ({ imageSrc, onCrop, onUploadNew, onClose, source }) =
 };
 
 // Image Upload Component
-const ImageUpload = ({ 
-  value, 
-  onChange, 
-  label, 
+const ImageUpload = ({
+  value,
+  onChange,
+  label,
   placeholder = "https://via.placeholder.com/400x300?text=No+Image",
   className = "",
-  aspectRatio = "auto"
+  aspectRatio = "auto",
 }) => {
   const fileInputRef = useRef(null);
   const [showOptions, setShowOptions] = useState(false);
@@ -772,7 +966,7 @@ const ImageUpload = ({
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       Swal.fire({
         icon: "error",
         title: "Invalid File",
@@ -818,10 +1012,10 @@ const ImageUpload = ({
 
   const handleCameraClick = () => {
     // Create a file input with camera capture
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment'; // Use back camera on mobile
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment"; // Use back camera on mobile
     input.onchange = (e) => {
       const file = e.target.files?.[0];
       if (file) handleFileSelect(file);
@@ -836,7 +1030,8 @@ const ImageUpload = ({
     onChange("");
   };
 
-  const hasImage = value && value !== placeholder && !value.includes('placeholder');
+  const hasImage =
+    value && value !== placeholder && !value.includes("placeholder");
 
   return (
     <div className={className}>
@@ -848,7 +1043,11 @@ const ImageUpload = ({
       <div className="relative">
         <div
           className={`relative overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-indigo-400 cursor-pointer ${
-            aspectRatio === "square" ? "aspect-square" : aspectRatio === "portrait" ? "aspect-[3/4]" : ""
+            aspectRatio === "square"
+              ? "aspect-square"
+              : aspectRatio === "portrait"
+              ? "aspect-[3/4]"
+              : ""
           }`}
           onClick={() => setShowOptions(!showOptions)}
         >
@@ -856,7 +1055,9 @@ const ImageUpload = ({
             <img
               src={preview}
               alt={label || "Preview"}
-              className={`h-full w-full object-cover ${hasImage ? "" : "opacity-50"}`}
+              className={`h-full w-full object-cover ${
+                hasImage ? "" : "opacity-50"
+              }`}
               onError={(e) => {
                 e.target.src = placeholder;
               }}
@@ -868,16 +1069,41 @@ const ImageUpload = ({
               onClick={handleRemove}
               className="absolute top-2 right-2 rounded-full bg-rose-500 p-1.5 text-white shadow-lg transition hover:bg-rose-600"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition hover:bg-black/10">
             <div className="text-center">
-              <svg className="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="mx-auto h-8 w-8 text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
               <p className="mt-2 text-xs font-medium text-slate-600">
                 {hasImage ? "Click to change" : "Click to upload"}
@@ -894,8 +1120,18 @@ const ImageUpload = ({
               onClick={handleGalleryClick}
               className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 first:rounded-t-2xl"
             >
-              <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                className="h-5 w-5 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
               <span>Choose from Gallery</span>
             </button>
@@ -904,9 +1140,24 @@ const ImageUpload = ({
               onClick={handleCameraClick}
               className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 last:rounded-b-2xl"
             >
-              <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="h-5 w-5 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
               <span>Take Photo</span>
             </button>
@@ -971,9 +1222,22 @@ const UserDetails = () => {
 
   const [errors, setErrors] = useState({});
   const [activeUploadMenu, setActiveUploadMenu] = useState(null);
-  const [cropModal, setCropModal] = useState({ show: false, imageSrc: null, fieldName: null });
-  const [cameraModal, setCameraModal] = useState({ show: false, fieldName: null, stream: null });
-  const [imagePreview, setImagePreview] = useState({ show: false, imageSrc: null, fieldName: null, source: null });
+  const [cropModal, setCropModal] = useState({
+    show: false,
+    imageSrc: null,
+    fieldName: null,
+  });
+  const [cameraModal, setCameraModal] = useState({
+    show: false,
+    fieldName: null,
+    stream: null,
+  });
+  const [imagePreview, setImagePreview] = useState({
+    show: false,
+    imageSrc: null,
+    fieldName: null,
+    source: null,
+  });
   // Track image source (gallery or camera) for each field
   const [imageSources, setImageSources] = useState({
     passportFrontImage: null, // 'gallery' or 'camera'
@@ -989,25 +1253,26 @@ const UserDetails = () => {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (activeUploadMenu && !e.target.closest('.upload-menu-container')) {
+      if (activeUploadMenu && !e.target.closest(".upload-menu-container")) {
         setActiveUploadMenu(null);
       }
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [activeUploadMenu]);
 
   // Helper function to handle image upload
   const handleImageUpload = (fieldName, useCamera = false) => {
     if (useCamera) {
       // Check if we're on HTTPS or localhost (required for camera access)
-      const isSecureContext = window.isSecureContext || 
-                              location.protocol === 'https:' || 
-                              location.hostname === 'localhost' || 
-                              location.hostname === '127.0.0.1';
-      
+      const isSecureContext =
+        window.isSecureContext ||
+        location.protocol === "https:" ||
+        location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1";
+
       if (!isSecureContext) {
-        console.error('Camera requires HTTPS or localhost');
+        console.error("Camera requires HTTPS or localhost");
         Swal.fire({
           icon: "error",
           title: "Camera Requires Secure Connection",
@@ -1019,7 +1284,7 @@ const UserDetails = () => {
 
       // Check if MediaDevices API is available
       if (!navigator.mediaDevices) {
-        console.error('MediaDevices API not available');
+        console.error("MediaDevices API not available");
         Swal.fire({
           icon: "error",
           title: "Camera Not Supported",
@@ -1030,7 +1295,7 @@ const UserDetails = () => {
       }
 
       if (!navigator.mediaDevices.getUserMedia) {
-        console.error('getUserMedia not available');
+        console.error("getUserMedia not available");
         // Fallback to file input with capture attribute
         openFileInputWithCamera(fieldName);
         setActiveUploadMenu(null);
@@ -1039,107 +1304,124 @@ const UserDetails = () => {
 
       // Show loading state
       Swal.fire({
-        title: 'Accessing Camera',
-        html: 'Please allow camera access when prompted...',
+        title: "Accessing Camera",
+        html: "Please allow camera access when prompted...",
         allowOutsideClick: false,
         allowEscapeKey: false,
         showConfirmButton: false,
         didOpen: () => {
           Swal.showLoading();
-        }
+        },
       });
 
       // Request camera access
-      console.log('Requesting camera access...');
-      navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Prefer back camera for documents
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        } 
-      })
-      .then((stream) => {
-        console.log('Camera stream obtained:', stream);
-        console.log('Stream active:', stream.active);
-        console.log('Stream id:', stream.id);
-        
-        // Verify stream has active tracks
-        const videoTracks = stream.getVideoTracks();
-        console.log('Video tracks count:', videoTracks.length);
-        
-        if (videoTracks.length === 0) {
-          stream.getTracks().forEach(track => track.stop());
-          throw new Error('No video tracks in stream');
-        }
+      console.log("Requesting camera access...");
+      navigator.mediaDevices
+        .getUserMedia({
+          video: {
+            facingMode: "environment", // Prefer back camera for documents
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        })
+        .then((stream) => {
+          console.log("Camera stream obtained:", stream);
+          console.log("Stream active:", stream.active);
+          console.log("Stream id:", stream.id);
 
-        console.log('Video tracks:', videoTracks.map(t => ({ 
-          id: t.id, 
-          label: t.label, 
-          readyState: t.readyState,
-          enabled: t.enabled,
-          muted: t.muted
-        })));
-        
-        // Close loading alert first
-        Swal.close();
-        
-        // Show camera modal immediately
-        console.log('Opening camera modal with stream');
-        setCameraModal({
-          show: true,
-          fieldName: fieldName,
-          stream: stream,
-        });
-      })
-      .catch((error) => {
-        console.error('Camera access error:', error);
-        Swal.close();
-        
-        let errorMessage = "Please allow camera access to take photos.";
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          errorMessage = "Camera access was denied. Please allow camera permissions in your browser settings and try again.";
-        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-          errorMessage = "No camera found. Please connect a camera or use gallery upload.";
-        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-          errorMessage = "Camera is already in use by another application. Please close other apps using the camera.";
-        } else if (error.name === 'OverconstrainedError') {
-          // Try with simpler constraints
-          console.log('Trying fallback with simpler constraints...');
-          navigator.mediaDevices.getUserMedia({ video: true })
-            .then((stream) => {
-              Swal.close();
-              console.log('Fallback camera stream obtained:', stream);
-              setCameraModal({
-                show: true,
-                fieldName: fieldName,
-                stream: stream,
+          // Verify stream has active tracks
+          const videoTracks = stream.getVideoTracks();
+          console.log("Video tracks count:", videoTracks.length);
+
+          if (videoTracks.length === 0) {
+            stream.getTracks().forEach((track) => track.stop());
+            throw new Error("No video tracks in stream");
+          }
+
+          console.log(
+            "Video tracks:",
+            videoTracks.map((t) => ({
+              id: t.id,
+              label: t.label,
+              readyState: t.readyState,
+              enabled: t.enabled,
+              muted: t.muted,
+            }))
+          );
+
+          // Close loading alert first
+          Swal.close();
+
+          // Show camera modal immediately
+          console.log("Opening camera modal with stream");
+          setCameraModal({
+            show: true,
+            fieldName: fieldName,
+            stream: stream,
+          });
+        })
+        .catch((error) => {
+          console.error("Camera access error:", error);
+          Swal.close();
+
+          let errorMessage = "Please allow camera access to take photos.";
+          if (
+            error.name === "NotAllowedError" ||
+            error.name === "PermissionDeniedError"
+          ) {
+            errorMessage =
+              "Camera access was denied. Please allow camera permissions in your browser settings and try again.";
+          } else if (
+            error.name === "NotFoundError" ||
+            error.name === "DevicesNotFoundError"
+          ) {
+            errorMessage =
+              "No camera found. Please connect a camera or use gallery upload.";
+          } else if (
+            error.name === "NotReadableError" ||
+            error.name === "TrackStartError"
+          ) {
+            errorMessage =
+              "Camera is already in use by another application. Please close other apps using the camera.";
+          } else if (error.name === "OverconstrainedError") {
+            // Try with simpler constraints
+            console.log("Trying fallback with simpler constraints...");
+            navigator.mediaDevices
+              .getUserMedia({ video: true })
+              .then((stream) => {
+                Swal.close();
+                console.log("Fallback camera stream obtained:", stream);
+                setCameraModal({
+                  show: true,
+                  fieldName: fieldName,
+                  stream: stream,
+                });
+              })
+              .catch((fallbackError) => {
+                console.error("Fallback camera error:", fallbackError);
+                Swal.close();
+                Swal.fire({
+                  icon: "error",
+                  title: "Camera Access Failed",
+                  text: "Unable to access camera. Please try uploading from gallery instead.",
+                  confirmButtonColor: "#0f172a",
+                });
+                // Fallback to file input with capture attribute
+                openFileInputWithCamera(fieldName);
               });
-            })
-            .catch((fallbackError) => {
-              console.error('Fallback camera error:', fallbackError);
-              Swal.close();
-              Swal.fire({
-                icon: "error",
-                title: "Camera Access Failed",
-                text: "Unable to access camera. Please try uploading from gallery instead.",
-                confirmButtonColor: "#0f172a",
-              });
-              // Fallback to file input with capture attribute
-              openFileInputWithCamera(fieldName);
-            });
-          return;
-        }
-        
-        Swal.fire({
-          icon: "error",
-          title: "Camera Access Error",
-          text: errorMessage,
-          confirmButtonColor: "#0f172a",
+            return;
+          }
+
+          Swal.fire({
+            icon: "error",
+            title: "Camera Access Error",
+            text: errorMessage,
+            confirmButtonColor: "#0f172a",
+          });
+
+          // Fallback to file input with capture attribute
+          openFileInputWithCamera(fieldName);
         });
-        
-        // Fallback to file input with capture attribute
-        openFileInputWithCamera(fieldName);
-      });
     } else {
       // Gallery selection - no camera needed
       openFileInputForGallery(fieldName);
@@ -1151,18 +1433,18 @@ const UserDetails = () => {
   const handleCameraCapture = (imageData) => {
     // Store fieldName before closing modal
     const fieldName = cameraModal.fieldName;
-    
+
     // Track that this image came from camera
     if (fieldName) {
-      setImageSources(prev => ({ ...prev, [fieldName]: 'camera' }));
+      setImageSources((prev) => ({ ...prev, [fieldName]: "camera" }));
     }
-    
+
     // Close camera modal and stop stream
     if (cameraModal.stream) {
-      cameraModal.stream.getTracks().forEach(track => track.stop());
+      cameraModal.stream.getTracks().forEach((track) => track.stop());
     }
     setCameraModal({ show: false, fieldName: null, stream: null });
-    
+
     // Immediately show crop modal
     if (fieldName && imageData) {
       setCropModal({
@@ -1175,7 +1457,7 @@ const UserDetails = () => {
 
   // Handle image click to show preview
   const handleImageClick = (imageSrc, fieldName) => {
-    if (imageSrc && !imageSrc.includes('placeholder')) {
+    if (imageSrc && !imageSrc.includes("placeholder")) {
       // Get the source for this image field
       const source = imageSources[fieldName] || null;
       setImagePreview({
@@ -1189,7 +1471,7 @@ const UserDetails = () => {
 
   // Handle crop from preview
   const handleCropFromPreview = () => {
-    setImagePreview(prev => ({
+    setImagePreview((prev) => ({
       ...prev,
       show: false,
     }));
@@ -1204,27 +1486,32 @@ const UserDetails = () => {
   const handleUploadNewFromPreview = () => {
     const fieldName = imagePreview.fieldName;
     const source = imagePreview.source; // 'gallery' or 'camera'
-    setImagePreview({ show: false, imageSrc: null, fieldName: null, source: null });
-    
+    setImagePreview({
+      show: false,
+      imageSrc: null,
+      fieldName: null,
+      source: null,
+    });
+
     // Use the same source as the original upload
     // If source is 'gallery', open gallery; if 'camera', open camera; if null, default to gallery
-    const useCamera = source === 'camera';
+    const useCamera = source === "camera";
     handleImageUpload(fieldName, useCamera);
   };
 
   // Fallback: Open file input with camera capture attribute
   const openFileInputWithCamera = (fieldName) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
     // Set capture attribute to force camera
-    input.setAttribute('capture', 'environment'); // Back camera
-    
+    input.setAttribute("capture", "environment"); // Back camera
+
     input.onchange = (e) => {
       const file = e.target.files?.[0];
       if (file) {
         // Track source as camera
-        setImageSources(prev => ({ ...prev, [fieldName]: 'camera' }));
+        setImageSources((prev) => ({ ...prev, [fieldName]: "camera" }));
         handleFileSelected(file, fieldName, true);
       }
       // Clean up
@@ -1232,13 +1519,13 @@ const UserDetails = () => {
         document.body.removeChild(input);
       }
     };
-    
+
     // Append to DOM and click
-    input.style.position = 'fixed';
-    input.style.top = '-1000px';
-    input.style.left = '-1000px';
+    input.style.position = "fixed";
+    input.style.top = "-1000px";
+    input.style.left = "-1000px";
     document.body.appendChild(input);
-    
+
     // Use setTimeout to ensure input is in DOM
     setTimeout(() => {
       try {
@@ -1250,7 +1537,7 @@ const UserDetails = () => {
           }
         }, 2000);
       } catch (err) {
-        console.error('Error clicking file input:', err);
+        console.error("Error clicking file input:", err);
         if (input.parentNode) {
           document.body.removeChild(input);
         }
@@ -1260,12 +1547,13 @@ const UserDetails = () => {
 
   // Open file input for gallery selection
   const openFileInputForGallery = (fieldName) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => handleFileSelected(e.target.files?.[0], fieldName, false);
-    
-    input.style.display = 'none';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) =>
+      handleFileSelected(e.target.files?.[0], fieldName, false);
+
+    input.style.display = "none";
     document.body.appendChild(input);
     requestAnimationFrame(() => {
       input.click();
@@ -1280,8 +1568,8 @@ const UserDetails = () => {
   // Handle the selected file
   const handleFileSelected = (file, fieldName, isCamera) => {
     if (!file) return;
-    
-    if (!file.type.startsWith('image/')) {
+
+    if (!file.type.startsWith("image/")) {
       Swal.fire({
         icon: "error",
         title: "Invalid File",
@@ -1290,7 +1578,7 @@ const UserDetails = () => {
       });
       return;
     }
-    
+
     if (file.size > 5 * 1024 * 1024) {
       Swal.fire({
         icon: "error",
@@ -1300,13 +1588,13 @@ const UserDetails = () => {
       });
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       // Track the source
-      const source = isCamera ? 'camera' : 'gallery';
-      setImageSources(prev => ({ ...prev, [fieldName]: source }));
-      
+      const source = isCamera ? "camera" : "gallery";
+      setImageSources((prev) => ({ ...prev, [fieldName]: source }));
+
       if (isCamera) {
         // Show crop modal for camera captures (from file input fallback)
         setCropModal({
@@ -1339,15 +1627,15 @@ const UserDetails = () => {
       if (response?.data) {
         const userData = response.data;
         setProfile(userData);
-        
+
         // Populate form fields
         setBasicInfo({
           fullName: userData.fullName || "",
           email: userData.email || "",
           countryCode: userData.countryCode || "+1",
           mobile_number: userData.mobile_number || "",
-          date_of_birth: userData.date_of_birth 
-            ? new Date(userData.date_of_birth).toISOString().split('T')[0]
+          date_of_birth: userData.date_of_birth
+            ? new Date(userData.date_of_birth).toISOString().split("T")[0]
             : "",
           gender: userData.gender || "",
           city: userData.city || "",
@@ -1367,17 +1655,21 @@ const UserDetails = () => {
           passportNumber: userData.passportInfo?.passportNumber || "",
           nationality: userData.passportInfo?.nationality || "",
           issueDate: userData.passportInfo?.issueDate
-            ? new Date(userData.passportInfo.issueDate).toISOString().split('T')[0]
+            ? new Date(userData.passportInfo.issueDate)
+                .toISOString()
+                .split("T")[0]
             : "",
           expiryDate: userData.passportInfo?.expiryDate
-            ? new Date(userData.passportInfo.expiryDate).toISOString().split('T')[0]
+            ? new Date(userData.passportInfo.expiryDate)
+                .toISOString()
+                .split("T")[0]
             : "",
           placeOfIssue: userData.passportInfo?.placeOfIssue || "",
           passportFrontImage: userData.passportInfo?.passportFrontImage || "",
           passportBackImage: userData.passportInfo?.passportBackImage || "",
           passportFullCopy: userData.passportInfo?.passportFullCopy || "",
         });
-        
+
         // Reset image sources when fetching profile (existing images don't have source info)
         setImageSources({
           passportFrontImage: null,
@@ -1392,63 +1684,335 @@ const UserDetails = () => {
     }
   };
 
+  // Validation helper functions
+  const validateEmail = (email) => {
+    if (!email || !email.trim()) {
+      return "Email is required";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return "Please enter a valid email address";
+    }
+    return "";
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone || !phone.trim()) {
+      return "Mobile number is required";
+    }
+    const cleanedPhone = phone.replace(/\s|-|\(|\)/g, "");
+    if (!/^\d{7,15}$/.test(cleanedPhone)) {
+      return "Phone number must be 7-15 digits";
+    }
+    return "";
+  };
+
+  const validateName = (name) => {
+    if (!name || !name.trim()) {
+      return "Full name is required";
+    }
+    if (name.trim().length < 2) {
+      return "Name must be at least 2 characters";
+    }
+    if (name.trim().length > 100) {
+      return "Name must be less than 100 characters";
+    }
+    if (!/^[a-zA-Z\s'-]+$/.test(name.trim())) {
+      return "Name can only contain letters, spaces, hyphens, and apostrophes";
+    }
+    return "";
+  };
+
+  const validateDate = (date, fieldName, isFutureAllowed = false, minAge = null, maxAge = null) => {
+    if (!date) {
+      return "";
+    }
+    const dateObj = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (isNaN(dateObj.getTime())) {
+      return `Please enter a valid ${fieldName}`;
+    }
+    
+    if (!isFutureAllowed && dateObj > today) {
+      return `${fieldName} cannot be in the future`;
+    }
+    
+    if (minAge !== null) {
+      const age = Math.floor((today - dateObj) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < minAge) {
+        return `You must be at least ${minAge} years old`;
+      }
+    }
+    
+    if (maxAge !== null) {
+      const age = Math.floor((today - dateObj) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age > maxAge) {
+        return `Age cannot exceed ${maxAge} years`;
+      }
+    }
+    
+    return "";
+  };
+
+  const validatePassportNumber = (passportNumber) => {
+    if (!passportNumber || !passportNumber.trim()) {
+      return "";
+    }
+    const cleaned = passportNumber.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6,12}$/.test(cleaned)) {
+      return "Passport number must be 6-12 alphanumeric characters";
+    }
+    return "";
+  };
+
+  const validateDateRange = (startDate, endDate, startField, endField) => {
+    if (!startDate || !endDate) {
+      return "";
+    }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return "";
+    }
+    
+    if (end <= start) {
+      return `${endField} must be after ${startField}`;
+    }
+    
+    return "";
+  };
+
+  const validateZipCode = (zipCode) => {
+    if (!zipCode || !zipCode.trim()) {
+      return "";
+    }
+    const cleaned = zipCode.trim();
+    if (!/^[A-Z0-9\s-]{3,10}$/i.test(cleaned)) {
+      return "Please enter a valid zip/postal code";
+    }
+    return "";
+  };
+
+  // Comprehensive validation functions
   const validateBasicInfo = () => {
     const newErrors = {};
     
-    if (!basicInfo.fullName.trim()) {
-      newErrors.fullName = "Full name is required";
+    // Full Name
+    const nameError = validateName(basicInfo.fullName);
+    if (nameError) newErrors.fullName = nameError;
+    
+    // Email
+    const emailError = validateEmail(basicInfo.email);
+    if (emailError) newErrors.email = emailError;
+    
+    // Mobile Number
+    const phoneError = validatePhone(basicInfo.mobile_number);
+    if (phoneError) newErrors.mobile_number = phoneError;
+    
+    // Date of Birth
+    const dobError = validateDate(basicInfo.date_of_birth, "Date of birth", false, 18, 120);
+    if (dobError) newErrors.date_of_birth = dobError;
+    
+    // Gender (optional but validate if provided)
+    if (basicInfo.gender && !["male", "female", "other"].includes(basicInfo.gender)) {
+      newErrors.gender = "Please select a valid gender";
     }
-    if (!basicInfo.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(basicInfo.email)) {
-      newErrors.email = "Enter a valid email address";
+    
+    // City (optional but validate format if provided)
+    if (basicInfo.city && basicInfo.city.trim().length > 100) {
+      newErrors.city = "City name must be less than 100 characters";
     }
-    if (!basicInfo.mobile_number.trim()) {
-      newErrors.mobile_number = "Mobile number is required";
-    } else if (!/^\d{7,15}$/.test(basicInfo.mobile_number.replace(/\s|-/g, ""))) {
-      newErrors.mobile_number = "Phone number should be 7-15 digits";
-    }
-    if (basicInfo.date_of_birth) {
-      const birthDate = new Date(basicInfo.date_of_birth);
-      const today = new Date();
-      if (birthDate > today) {
-        newErrors.date_of_birth = "Date of birth cannot be in the future";
-      }
+    
+    // Company Name (optional but validate format if provided)
+    if (basicInfo.company_name && basicInfo.company_name.trim().length > 200) {
+      newErrors.company_name = "Company name must be less than 200 characters";
     }
 
-    setErrors(newErrors);
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateAddress = () => {
+    const newErrors = {};
+    
+    // Street (optional but validate if provided)
+    if (address.street && address.street.trim().length > 200) {
+      newErrors.street = "Street address must be less than 200 characters";
+    }
+    
+    // City (optional but validate if provided)
+    if (address.city && address.city.trim().length > 100) {
+      newErrors.city = "City name must be less than 100 characters";
+    }
+    
+    // State (optional but validate if provided)
+    if (address.state && address.state.trim().length > 100) {
+      newErrors.state = "State/Province must be less than 100 characters";
+    }
+    
+    // Country (optional but validate if provided)
+    if (address.country && address.country.trim().length > 100) {
+      newErrors.country = "Country name must be less than 100 characters";
+    }
+    
+    // Zip Code
+    if (address.zipCode) {
+      const zipError = validateZipCode(address.zipCode);
+      if (zipError) newErrors.zipCode = zipError;
+    }
+
+    setErrors((prev) => ({ ...prev, ...newErrors }));
     return Object.keys(newErrors).length === 0;
   };
 
   const validatePassportInfo = () => {
     const newErrors = {};
     
-    if (passportInfo.passportNumber && !/^[A-Z0-9]{6,12}$/i.test(passportInfo.passportNumber)) {
-      newErrors.passportNumber = "Invalid passport number format";
+    // Passport Number
+    if (passportInfo.passportNumber) {
+      const passportError = validatePassportNumber(passportInfo.passportNumber);
+      if (passportError) newErrors.passportNumber = passportError;
     }
+    
+    // Nationality (optional but validate if provided)
+    if (passportInfo.nationality && passportInfo.nationality.trim().length > 100) {
+      newErrors.nationality = "Nationality must be less than 100 characters";
+    }
+    
+    // Issue Date
+    if (passportInfo.issueDate) {
+      const issueError = validateDate(passportInfo.issueDate, "Issue date", false);
+      if (issueError) newErrors.issueDate = issueError;
+    }
+    
+    // Expiry Date
+    if (passportInfo.expiryDate) {
+      const expiryError = validateDate(passportInfo.expiryDate, "Expiry date", true);
+      if (expiryError) {
+        newErrors.expiryDate = expiryError;
+      } else {
+        // Check if passport is expired
+        const expiryDate = new Date(passportInfo.expiryDate);
+        const today = new Date();
+        if (expiryDate < today) {
+          newErrors.expiryDate = "Passport has expired";
+        }
+      }
+    }
+    
+    // Date Range Validation
     if (passportInfo.issueDate && passportInfo.expiryDate) {
-      const issueDate = new Date(passportInfo.issueDate);
-      const expiryDate = new Date(passportInfo.expiryDate);
-      if (expiryDate <= issueDate) {
-        newErrors.expiryDate = "Expiry date must be after issue date";
-      }
-      if (expiryDate < new Date()) {
-        newErrors.expiryDate = "Passport has expired";
-      }
+      const rangeError = validateDateRange(
+        passportInfo.issueDate,
+        passportInfo.expiryDate,
+        "issue date",
+        "expiry date"
+      );
+      if (rangeError) newErrors.expiryDate = rangeError;
+    }
+    
+    // Place of Issue (optional but validate if provided)
+    if (passportInfo.placeOfIssue && passportInfo.placeOfIssue.trim().length > 100) {
+      newErrors.placeOfIssue = "Place of issue must be less than 100 characters";
     }
 
-    setErrors(newErrors);
+    setErrors((prev) => ({ ...prev, ...newErrors }));
     return Object.keys(newErrors).length === 0;
   };
 
+  // Real-time validation on field blur
+  const validateField = (fieldName, value, section = "basic") => {
+    const newErrors = { ...errors };
+    let error = "";
+
+    switch (fieldName) {
+      case "fullName":
+        error = validateName(value);
+        break;
+      case "email":
+        error = validateEmail(value);
+        break;
+      case "mobile_number":
+        error = validatePhone(value);
+        break;
+      case "date_of_birth":
+        error = validateDate(value, "Date of birth", false, 18, 120);
+        break;
+      case "passportNumber":
+        error = validatePassportNumber(value);
+        break;
+      case "issueDate":
+        error = validateDate(value, "Issue date", false);
+        // Re-validate expiry date if both dates exist
+        if (!error && passportInfo.expiryDate) {
+          const rangeError = validateDateRange(
+            value,
+            passportInfo.expiryDate,
+            "issue date",
+            "expiry date"
+          );
+          if (rangeError) {
+            newErrors.expiryDate = rangeError;
+          } else {
+            delete newErrors.expiryDate;
+          }
+        }
+        break;
+      case "expiryDate":
+        error = validateDate(value, "Expiry date", true);
+        if (!error) {
+          const expiryDate = new Date(value);
+          const today = new Date();
+          if (expiryDate < today) {
+            error = "Passport has expired";
+          } else if (passportInfo.issueDate) {
+            const rangeError = validateDateRange(
+              passportInfo.issueDate,
+              value,
+              "issue date",
+              "expiry date"
+            );
+            if (rangeError) error = rangeError;
+          }
+        }
+        break;
+      case "zipCode":
+        error = validateZipCode(value);
+        break;
+      default:
+        break;
+    }
+
+    if (error) {
+      newErrors[fieldName] = error;
+    } else {
+      delete newErrors[fieldName];
+    }
+
+    setErrors(newErrors);
+  };
+
   const handleUpdateProfile = async () => {
-    if (!validateBasicInfo()) {
+    // Validate both basic info and address
+    const isBasicValid = validateBasicInfo();
+    const isAddressValid = validateAddress();
+    
+    if (!isBasicValid || !isAddressValid) {
+      const errorCount = Object.keys(errors).length;
       Swal.fire({
         icon: "error",
         title: "Validation Error",
-        text: "Please fix the highlighted fields.",
+        text: `Please fix ${errorCount} ${errorCount === 1 ? 'error' : 'errors'} in the form.`,
         confirmButtonColor: "#0f172a",
       });
+      // Scroll to first error
+      const firstErrorField = document.querySelector('[class*="border-rose"]');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -1494,12 +2058,20 @@ const UserDetails = () => {
 
   const handleUpdatePassport = async () => {
     if (!validatePassportInfo()) {
+      const errorCount = Object.keys(errors).filter(key => 
+        ['passportNumber', 'nationality', 'issueDate', 'expiryDate', 'placeOfIssue'].includes(key)
+      ).length;
       Swal.fire({
         icon: "error",
         title: "Validation Error",
-        text: "Please fix the highlighted fields.",
+        text: `Please fix ${errorCount} ${errorCount === 1 ? 'error' : 'errors'} in the passport information.`,
         confirmButtonColor: "#0f172a",
       });
+      // Scroll to first error
+      const firstErrorField = document.querySelector('[class*="border-rose"]');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -1542,7 +2114,7 @@ const UserDetails = () => {
         countryCode: profile.countryCode || "+1",
         mobile_number: profile.mobile_number || "",
         date_of_birth: profile.date_of_birth
-          ? new Date(profile.date_of_birth).toISOString().split('T')[0]
+          ? new Date(profile.date_of_birth).toISOString().split("T")[0]
           : "",
         gender: profile.gender || "",
         city: profile.city || "",
@@ -1560,17 +2132,19 @@ const UserDetails = () => {
         passportNumber: profile.passportInfo?.passportNumber || "",
         nationality: profile.passportInfo?.nationality || "",
         issueDate: profile.passportInfo?.issueDate
-          ? new Date(profile.passportInfo.issueDate).toISOString().split('T')[0]
+          ? new Date(profile.passportInfo.issueDate).toISOString().split("T")[0]
           : "",
         expiryDate: profile.passportInfo?.expiryDate
-          ? new Date(profile.passportInfo.expiryDate).toISOString().split('T')[0]
+          ? new Date(profile.passportInfo.expiryDate)
+              .toISOString()
+              .split("T")[0]
           : "",
         placeOfIssue: profile.passportInfo?.placeOfIssue || "",
         passportFrontImage: profile.passportInfo?.passportFrontImage || "",
         passportBackImage: profile.passportInfo?.passportBackImage || "",
         passportFullCopy: profile.passportInfo?.passportFullCopy || "",
       });
-      
+
       // Reset image sources
       setImageSources({
         passportFrontImage: null,
@@ -1594,14 +2168,14 @@ const UserDetails = () => {
   }
 
   if (!profile) {
-  return (
-    <section className="flex min-h-screen items-center bg-slate-50 px-4 py-12 text-slate-900 sm:px-6 lg:px-8">
+    return (
+      <section className="flex min-h-screen items-center bg-slate-50 px-4 py-12 text-slate-900 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-5xl">
           <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
             <h2 className="text-2xl font-semibold text-slate-900">
               No profile found
             </h2>
-          <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-slate-500">
               We couldn't find your profile. Please log in to view your details.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -1618,8 +2192,10 @@ const UserDetails = () => {
     );
   }
 
-  const profilePlaceholder = "https://via.placeholder.com/200x200?text=Profile+Photo";
-  const passportPlaceholder = "https://via.placeholder.com/400x300?text=Passport+Image";
+  const profilePlaceholder =
+    "https://via.placeholder.com/200x200?text=Profile+Photo";
+  const passportPlaceholder =
+    "https://via.placeholder.com/400x300?text=Passport+Image";
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
@@ -1627,7 +2203,9 @@ const UserDetails = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-indigo-600">User Profile</p>
+            <p className="text-sm font-semibold text-indigo-600">
+              User Profile
+            </p>
             <h1 className="mt-2 text-3xl font-bold text-slate-900">
               My Profile
             </h1>
@@ -1640,8 +2218,18 @@ const UserDetails = () => {
               onClick={() => setIsEditing(true)}
               className="flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
               </svg>
               Edit Profile
             </button>
@@ -1656,7 +2244,9 @@ const UserDetails = () => {
               {isEditing ? (
                 <ImageUpload
                   value={basicInfo.profilePic}
-                  onChange={(value) => setBasicInfo({ ...basicInfo, profilePic: value })}
+                  onChange={(value) =>
+                    setBasicInfo({ ...basicInfo, profilePic: value })
+                  }
                   placeholder={profilePlaceholder}
                   aspectRatio="square"
                   className="w-24"
@@ -1681,12 +2271,22 @@ const UserDetails = () => {
               )}
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <h2 className="text-2xl font-bold text-slate-900">{profile.fullName}</h2>
+              <h2 className="text-2xl font-bold text-slate-900">
+                {profile.fullName}
+              </h2>
               <p className="mt-1 text-sm text-slate-600">{profile.email}</p>
               <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                  <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-3 w-3"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   {profile.isVerified ? "Verified" : "Unverified"}
                 </span>
@@ -1724,7 +2324,7 @@ const UserDetails = () => {
           <div className="mt-6">
             {/* Basic Information Tab */}
             {activeTab === "basic" && (
-          <div className="space-y-6">
+              <div className="space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-700">
@@ -1736,18 +2336,31 @@ const UserDetails = () => {
                           type="text"
                           value={basicInfo.fullName}
                           onChange={(e) => {
-                            setBasicInfo({ ...basicInfo, fullName: e.target.value });
-                            if (errors.fullName) setErrors({ ...errors, fullName: "" });
+                            setBasicInfo({
+                              ...basicInfo,
+                              fullName: e.target.value,
+                            });
+                            if (errors.fullName)
+                              setErrors({ ...errors, fullName: "" });
                           }}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
+                          onBlur={(e) => validateField("fullName", e.target.value)}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.fullName
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
                           placeholder="Enter your full name"
                         />
                         {errors.fullName && (
-                          <span className="mt-1 block text-xs text-rose-600">{errors.fullName}</span>
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.fullName}
+                          </span>
                         )}
                       </>
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.fullName || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.fullName || "—"}
+                      </p>
                     )}
                   </div>
 
@@ -1761,18 +2374,31 @@ const UserDetails = () => {
                           type="email"
                           value={basicInfo.email}
                           onChange={(e) => {
-                            setBasicInfo({ ...basicInfo, email: e.target.value });
-                            if (errors.email) setErrors({ ...errors, email: "" });
+                            setBasicInfo({
+                              ...basicInfo,
+                              email: e.target.value,
+                            });
+                            if (errors.email)
+                              setErrors({ ...errors, email: "" });
                           }}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
+                          onBlur={(e) => validateField("email", e.target.value)}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.email
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
                           placeholder="you@example.com"
                         />
                         {errors.email && (
-                          <span className="mt-1 block text-xs text-rose-600">{errors.email}</span>
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.email}
+                          </span>
                         )}
                       </>
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.email || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.email || "—"}
+                      </p>
                     )}
                   </div>
 
@@ -1784,16 +2410,27 @@ const UserDetails = () => {
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         <CountryCodeSelect
                           value={basicInfo.countryCode}
-                          onChange={(value) => setBasicInfo({ ...basicInfo, countryCode: value })}
+                          onChange={(value) =>
+                            setBasicInfo({ ...basicInfo, countryCode: value })
+                          }
                         />
                         <input
                           type="tel"
                           value={basicInfo.mobile_number}
                           onChange={(e) => {
-                            setBasicInfo({ ...basicInfo, mobile_number: e.target.value });
-                            if (errors.mobile_number) setErrors({ ...errors, mobile_number: "" });
+                            setBasicInfo({
+                              ...basicInfo,
+                              mobile_number: e.target.value,
+                            });
+                            if (errors.mobile_number)
+                              setErrors({ ...errors, mobile_number: "" });
                           }}
-                          className="col-span-2 rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
+                          onBlur={(e) => validateField("mobile_number", e.target.value)}
+                          className={`col-span-2 rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.mobile_number
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
                           placeholder="1234567890"
                         />
                       </div>
@@ -1803,26 +2440,41 @@ const UserDetails = () => {
                       </p>
                     )}
                     {errors.mobile_number && (
-                      <span className="mt-1 block text-xs text-rose-600">{errors.mobile_number}</span>
+                      <span className="mt-1 block text-xs text-rose-600">
+                        {errors.mobile_number}
+                      </span>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Date of Birth</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Date of Birth
+                    </label>
                     {isEditing ? (
                       <>
                         <input
                           type="date"
                           value={basicInfo.date_of_birth}
                           onChange={(e) => {
-                            setBasicInfo({ ...basicInfo, date_of_birth: e.target.value });
-                            if (errors.date_of_birth) setErrors({ ...errors, date_of_birth: "" });
+                            setBasicInfo({
+                              ...basicInfo,
+                              date_of_birth: e.target.value,
+                            });
+                            if (errors.date_of_birth)
+                              setErrors({ ...errors, date_of_birth: "" });
                           }}
-                          max={new Date().toISOString().split('T')[0]}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
+                          onBlur={(e) => validateField("date_of_birth", e.target.value)}
+                          max={new Date().toISOString().split("T")[0]}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.date_of_birth
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
                         />
                         {errors.date_of_birth && (
-                          <span className="mt-1 block text-xs text-rose-600">{errors.date_of_birth}</span>
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.date_of_birth}
+                          </span>
                         )}
                       </>
                     ) : (
@@ -1835,11 +2487,15 @@ const UserDetails = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Gender</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Gender
+                    </label>
                     {isEditing ? (
                       <select
                         value={basicInfo.gender}
-                        onChange={(e) => setBasicInfo({ ...basicInfo, gender: e.target.value })}
+                        onChange={(e) =>
+                          setBasicInfo({ ...basicInfo, gender: e.target.value })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                       >
                         <option value="">Select gender</option>
@@ -1852,35 +2508,50 @@ const UserDetails = () => {
                         {profile.gender || "—"}
                       </p>
                     )}
-                </div>
+                  </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">City</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      City
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={basicInfo.city}
-                        onChange={(e) => setBasicInfo({ ...basicInfo, city: e.target.value })}
+                        onChange={(e) =>
+                          setBasicInfo({ ...basicInfo, city: e.target.value })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter your city"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.city || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.city || "—"}
+                      </p>
                     )}
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Company Name</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Company Name
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={basicInfo.company_name}
-                        onChange={(e) => setBasicInfo({ ...basicInfo, company_name: e.target.value })}
+                        onChange={(e) =>
+                          setBasicInfo({
+                            ...basicInfo,
+                            company_name: e.target.value,
+                          })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter your company name"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.company_name || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.company_name || "—"}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1892,77 +2563,120 @@ const UserDetails = () => {
               <div className="space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Street Address</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Street Address
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={address.street}
-                        onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                        onChange={(e) =>
+                          setAddress({ ...address, street: e.target.value })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter street address"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.address?.street || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.address?.street || "—"}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">City</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      City
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={address.city}
-                        onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                        onChange={(e) =>
+                          setAddress({ ...address, city: e.target.value })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter city"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.address?.city || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.address?.city || "—"}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">State/Province</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      State/Province
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={address.state}
-                        onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                        onChange={(e) =>
+                          setAddress({ ...address, state: e.target.value })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter state or province"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.address?.state || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.address?.state || "—"}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Country</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Country
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={address.country}
-                        onChange={(e) => setAddress({ ...address, country: e.target.value })}
+                        onChange={(e) =>
+                          setAddress({ ...address, country: e.target.value })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter country"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.address?.country || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.address?.country || "—"}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Zip/Postal Code</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Zip/Postal Code
+                    </label>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        value={address.zipCode}
-                        onChange={(e) => setAddress({ ...address, zipCode: e.target.value })}
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
-                        placeholder="Enter zip code"
-                      />
+                      <>
+                        <input
+                          type="text"
+                          value={address.zipCode}
+                          onChange={(e) => {
+                            setAddress({ ...address, zipCode: e.target.value });
+                            if (errors.zipCode) setErrors({ ...errors, zipCode: "" });
+                          }}
+                          onBlur={(e) => validateField("zipCode", e.target.value)}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.zipCode
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
+                          placeholder="Enter zip code"
+                        />
+                        {errors.zipCode && (
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.zipCode}
+                          </span>
+                        )}
+                      </>
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.address?.zipCode || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.address?.zipCode || "—"}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1974,35 +2688,59 @@ const UserDetails = () => {
               <div className="space-y-6">
                 <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4">
                   <div className="flex items-start gap-3">
-                    <svg className="h-5 w-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5 text-amber-600 mt-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-amber-800">Passport Information</p>
+                      <p className="text-sm font-medium text-amber-800">
+                        Passport Information
+                      </p>
                       <p className="mt-1 text-xs text-amber-700">
-                        This information is used to auto-fill visa application forms. Keep it up to date for faster processing.
-                    </p>
-                  </div>
+                        This information is used to auto-fill visa application
+                        forms. Keep it up to date for faster processing.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Passport Number</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Passport Number
+                    </label>
                     {isEditing ? (
                       <>
                         <input
                           type="text"
                           value={passportInfo.passportNumber}
                           onChange={(e) => {
-                            setPassportInfo({ ...passportInfo, passportNumber: e.target.value.toUpperCase() });
-                            if (errors.passportNumber) setErrors({ ...errors, passportNumber: "" });
+                            setPassportInfo({
+                              ...passportInfo,
+                              passportNumber: e.target.value.toUpperCase(),
+                            });
+                            if (errors.passportNumber)
+                              setErrors({ ...errors, passportNumber: "" });
                           }}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none uppercase"
+                          onBlur={(e) => validateField("passportNumber", e.target.value)}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none uppercase ${
+                            errors.passportNumber
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
                           placeholder="A12345678"
                         />
                         {errors.passportNumber && (
-                          <span className="mt-1 block text-xs text-rose-600">{errors.passportNumber}</span>
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.passportNumber}
+                          </span>
                         )}
                       </>
                     ) : (
@@ -2013,91 +2751,147 @@ const UserDetails = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Nationality</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Nationality
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={passportInfo.nationality}
-                        onChange={(e) => setPassportInfo({ ...passportInfo, nationality: e.target.value })}
+                        onChange={(e) =>
+                          setPassportInfo({
+                            ...passportInfo,
+                            nationality: e.target.value,
+                          })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter nationality"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.passportInfo?.nationality || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.passportInfo?.nationality || "—"}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Issue Date</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Issue Date
+                    </label>
                     {isEditing ? (
-                      <input
-                        type="date"
-                        value={passportInfo.issueDate}
-                        onChange={(e) => {
-                          setPassportInfo({ ...passportInfo, issueDate: e.target.value });
-                          if (errors.issueDate) setErrors({ ...errors, issueDate: "" });
-                        }}
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
-                      />
+                      <>
+                        <input
+                          type="date"
+                          value={passportInfo.issueDate}
+                          onChange={(e) => {
+                            setPassportInfo({
+                              ...passportInfo,
+                              issueDate: e.target.value,
+                            });
+                            if (errors.issueDate)
+                              setErrors({ ...errors, issueDate: "" });
+                          }}
+                          onBlur={(e) => validateField("issueDate", e.target.value)}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.issueDate
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
+                        />
+                        {errors.issueDate && (
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.issueDate}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <p className="mt-2 text-base text-slate-900">
                         {profile.passportInfo?.issueDate
-                          ? new Date(profile.passportInfo.issueDate).toLocaleDateString()
+                          ? new Date(
+                              profile.passportInfo.issueDate
+                            ).toLocaleDateString()
                           : "—"}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Expiry Date</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Expiry Date
+                    </label>
                     {isEditing ? (
                       <>
                         <input
                           type="date"
                           value={passportInfo.expiryDate}
                           onChange={(e) => {
-                            setPassportInfo({ ...passportInfo, expiryDate: e.target.value });
-                            if (errors.expiryDate) setErrors({ ...errors, expiryDate: "" });
+                            setPassportInfo({
+                              ...passportInfo,
+                              expiryDate: e.target.value,
+                            });
+                            if (errors.expiryDate)
+                              setErrors({ ...errors, expiryDate: "" });
                           }}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
+                          onBlur={(e) => validateField("expiryDate", e.target.value)}
+                          className={`mt-2 w-full rounded-2xl border px-4 py-3 text-base text-slate-900 focus:outline-none ${
+                            errors.expiryDate
+                              ? "border-rose-500 focus:border-rose-500"
+                              : "border-slate-200 focus:border-indigo-500"
+                          }`}
                         />
                         {errors.expiryDate && (
-                          <span className="mt-1 block text-xs text-rose-600">{errors.expiryDate}</span>
+                          <span className="mt-1 block text-xs text-rose-600">
+                            {errors.expiryDate}
+                          </span>
                         )}
                       </>
                     ) : (
                       <p className="mt-2 text-base text-slate-900">
                         {profile.passportInfo?.expiryDate
-                          ? new Date(profile.passportInfo.expiryDate).toLocaleDateString()
+                          ? new Date(
+                              profile.passportInfo.expiryDate
+                            ).toLocaleDateString()
                           : "—"}
                       </p>
                     )}
-                </div>
+                  </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Place of Issue</label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Place of Issue
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={passportInfo.placeOfIssue}
-                        onChange={(e) => setPassportInfo({ ...passportInfo, placeOfIssue: e.target.value })}
+                        onChange={(e) =>
+                          setPassportInfo({
+                            ...passportInfo,
+                            placeOfIssue: e.target.value,
+                          })
+                        }
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 focus:border-indigo-500 focus:outline-none"
                         placeholder="Enter place of issue"
                       />
                     ) : (
-                      <p className="mt-2 text-base text-slate-900">{profile.passportInfo?.placeOfIssue || "—"}</p>
+                      <p className="mt-2 text-base text-slate-900">
+                        {profile.passportInfo?.placeOfIssue || "—"}
+                      </p>
                     )}
-              </div>
+                  </div>
                 </div>
 
                 {/* Passport Images */}
                 <div className="mt-8">
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Passport Document Images</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                      Passport Document Images
+                    </h3>
                     <p className="text-sm text-slate-600">
-                      Upload clear images of your passport. These will be used to auto-fill visa application forms.
+                      Upload clear images of your passport. These will be used
+                      to auto-fill visa application forms.
                     </p>
-                </div>
+                  </div>
 
                   <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-3">
                     {isEditing ? (
@@ -2106,32 +2900,64 @@ const UserDetails = () => {
                         <div className="group">
                           <div className="mb-2 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
-                              <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <svg
+                                className="h-4 w-4 text-indigo-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
                               </svg>
                             </div>
                             <div>
-                              <label className="text-sm font-semibold text-slate-900">Front Page</label>
-                              <p className="text-xs text-slate-500">Photo & details page</p>
+                              <label className="text-sm font-semibold text-slate-900">
+                                Front Page
+                              </label>
+                              <p className="text-xs text-slate-500">
+                                Photo & details page
+                              </p>
                             </div>
                           </div>
                           <div className="relative upload-menu-container">
                             <div
                               className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                                passportInfo.passportFrontImage && !passportInfo.passportFrontImage.includes('placeholder')
+                                passportInfo.passportFrontImage &&
+                                !passportInfo.passportFrontImage.includes(
+                                  "placeholder"
+                                )
                                   ? "border-slate-300 bg-white hover:border-indigo-400"
                                   : "border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/30"
                               }`}
                               style={{ height: "200px" }}
                               onClick={() => {
-                                if (passportInfo.passportFrontImage && !passportInfo.passportFrontImage.includes('placeholder')) {
-                                  handleImageClick(passportInfo.passportFrontImage, 'passportFrontImage');
+                                if (
+                                  passportInfo.passportFrontImage &&
+                                  !passportInfo.passportFrontImage.includes(
+                                    "placeholder"
+                                  )
+                                ) {
+                                  handleImageClick(
+                                    passportInfo.passportFrontImage,
+                                    "passportFrontImage"
+                                  );
                                 } else {
-                                  setActiveUploadMenu(activeUploadMenu === 'front' ? null : 'front');
+                                  setActiveUploadMenu(
+                                    activeUploadMenu === "front"
+                                      ? null
+                                      : "front"
+                                  );
                                 }
                               }}
                             >
-                              {passportInfo.passportFrontImage && !passportInfo.passportFrontImage.includes('placeholder') ? (
+                              {passportInfo.passportFrontImage &&
+                              !passportInfo.passportFrontImage.includes(
+                                "placeholder"
+                              ) ? (
                                 <>
                                   <img
                                     src={passportInfo.passportFrontImage}
@@ -2142,39 +2968,87 @@ const UserDetails = () => {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setPassportInfo({ ...passportInfo, passportFrontImage: "" });
-                                      setImageSources(prev => ({ ...prev, passportFrontImage: null }));
+                                      setPassportInfo({
+                                        ...passportInfo,
+                                        passportFrontImage: "",
+                                      });
+                                      setImageSources((prev) => ({
+                                        ...prev,
+                                        passportFrontImage: null,
+                                      }));
                                     }}
                                     className="absolute top-2 right-2 rounded-full bg-rose-500 p-1.5 text-white shadow-lg transition hover:bg-rose-600"
                                   >
-                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <svg
+                                      className="h-3.5 w-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
                                     </svg>
-                </button>
+                                  </button>
                                 </>
                               ) : (
                                 <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                                  <svg className="h-10 w-10 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <svg
+                                    className="h-10 w-10 text-slate-400 mb-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                   </svg>
-                                  <p className="text-xs font-medium text-slate-600 mt-1">Click to upload</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">Gallery or camera</p>
-              </div>
+                                  <p className="text-xs font-medium text-slate-600 mt-1">
+                                    Click to upload
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-0.5">
+                                    Gallery or camera
+                                  </p>
+                                </div>
                               )}
-            </div>
-                            {activeUploadMenu === 'front' && (
+                            </div>
+                            {activeUploadMenu === "front" && (
                               <div className="absolute top-full left-0 z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl">
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageUpload('passportFrontImage', false);
+                                    handleImageUpload(
+                                      "passportFrontImage",
+                                      false
+                                    );
                                   }}
                                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 first:rounded-t-xl"
                                 >
-                                  <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  <svg
+                                    className="h-5 w-5 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
                                   </svg>
                                   <span>Choose from Gallery</span>
                                 </button>
@@ -2182,51 +3056,99 @@ const UserDetails = () => {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageUpload('passportFrontImage', true);
+                                    handleImageUpload(
+                                      "passportFrontImage",
+                                      true
+                                    );
                                   }}
                                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 last:rounded-b-xl"
                                 >
-                                  <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <svg
+                                    className="h-5 w-5 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                   </svg>
                                   <span>Take Photo</span>
                                 </button>
-                </div>
+                              </div>
                             )}
-            </div>
-          </div>
+                          </div>
+                        </div>
 
                         {/* Passport Back */}
                         <div className="group">
                           <div className="mb-2 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
-                              <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <svg
+                                className="h-4 w-4 text-indigo-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
                               </svg>
                             </div>
                             <div>
-                              <label className="text-sm font-semibold text-slate-900">Back Page</label>
-                              <p className="text-xs text-slate-500">Visa pages & stamps</p>
+                              <label className="text-sm font-semibold text-slate-900">
+                                Back Page
+                              </label>
+                              <p className="text-xs text-slate-500">
+                                Visa pages & stamps
+                              </p>
                             </div>
                           </div>
                           <div className="relative upload-menu-container">
                             <div
                               className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                                passportInfo.passportBackImage && !passportInfo.passportBackImage.includes('placeholder')
+                                passportInfo.passportBackImage &&
+                                !passportInfo.passportBackImage.includes(
+                                  "placeholder"
+                                )
                                   ? "border-slate-300 bg-white hover:border-indigo-400"
                                   : "border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/30"
                               }`}
                               style={{ height: "200px" }}
                               onClick={() => {
-                                if (passportInfo.passportBackImage && !passportInfo.passportBackImage.includes('placeholder')) {
-                                  handleImageClick(passportInfo.passportBackImage, 'passportBackImage');
+                                if (
+                                  passportInfo.passportBackImage &&
+                                  !passportInfo.passportBackImage.includes(
+                                    "placeholder"
+                                  )
+                                ) {
+                                  handleImageClick(
+                                    passportInfo.passportBackImage,
+                                    "passportBackImage"
+                                  );
                                 } else {
-                                  setActiveUploadMenu(activeUploadMenu === 'back' ? null : 'back');
+                                  setActiveUploadMenu(
+                                    activeUploadMenu === "back" ? null : "back"
+                                  );
                                 }
                               }}
                             >
-                              {passportInfo.passportBackImage && !passportInfo.passportBackImage.includes('placeholder') ? (
+                              {passportInfo.passportBackImage &&
+                              !passportInfo.passportBackImage.includes(
+                                "placeholder"
+                              ) ? (
                                 <>
                                   <img
                                     src={passportInfo.passportBackImage}
@@ -2237,57 +3159,123 @@ const UserDetails = () => {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setPassportInfo({ ...passportInfo, passportBackImage: "" });
-                                      setImageSources(prev => ({ ...prev, passportBackImage: null }));
+                                      setPassportInfo({
+                                        ...passportInfo,
+                                        passportBackImage: "",
+                                      });
+                                      setImageSources((prev) => ({
+                                        ...prev,
+                                        passportBackImage: null,
+                                      }));
                                     }}
                                     className="absolute top-2 right-2 rounded-full bg-rose-500 p-1.5 text-white shadow-lg transition hover:bg-rose-600"
                                   >
-                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <svg
+                                      className="h-3.5 w-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
                                     </svg>
                                   </button>
                                 </>
                               ) : (
                                 <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                                  <svg className="h-10 w-10 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <svg
+                                    className="h-10 w-10 text-slate-400 mb-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                   </svg>
-                                  <p className="text-xs font-medium text-slate-600 mt-1">Click to upload</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">Gallery or camera</p>
+                                  <p className="text-xs font-medium text-slate-600 mt-1">
+                                    Click to upload
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-0.5">
+                                    Gallery or camera
+                                  </p>
                                 </div>
                               )}
                             </div>
-                            {activeUploadMenu === 'back' && (
+                            {activeUploadMenu === "back" && (
                               <div className="absolute top-full left-0 z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl">
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageUpload('passportBackImage', false);
+                                    handleImageUpload(
+                                      "passportBackImage",
+                                      false
+                                    );
                                   }}
                                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 first:rounded-t-xl"
                                 >
-                                  <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  <svg
+                                    className="h-5 w-5 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
                                   </svg>
                                   <span>Choose from Gallery</span>
                                 </button>
-              <button
-                type="button"
+                                <button
+                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageUpload('passportBackImage', true);
+                                    handleImageUpload(
+                                      "passportBackImage",
+                                      true
+                                    );
                                   }}
                                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 last:rounded-b-xl"
                                 >
-                                  <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <svg
+                                    className="h-5 w-5 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                   </svg>
                                   <span>Take Photo</span>
-              </button>
-            </div>
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -2296,32 +3284,62 @@ const UserDetails = () => {
                         <div className="group">
                           <div className="mb-2 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
-                              <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                              <svg
+                                className="h-4 w-4 text-indigo-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                />
                               </svg>
                             </div>
                             <div>
-                              <label className="text-sm font-semibold text-slate-900">Full Document</label>
-                              <p className="text-xs text-slate-500">Complete passport scan</p>
+                              <label className="text-sm font-semibold text-slate-900">
+                                Full Document
+                              </label>
+                              <p className="text-xs text-slate-500">
+                                Complete passport scan
+                              </p>
                             </div>
                           </div>
                           <div className="relative upload-menu-container">
                             <div
                               className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                                passportInfo.passportFullCopy && !passportInfo.passportFullCopy.includes('placeholder')
+                                passportInfo.passportFullCopy &&
+                                !passportInfo.passportFullCopy.includes(
+                                  "placeholder"
+                                )
                                   ? "border-slate-300 bg-white hover:border-indigo-400"
                                   : "border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/30"
                               }`}
                               style={{ height: "200px" }}
                               onClick={() => {
-                                if (passportInfo.passportFullCopy && !passportInfo.passportFullCopy.includes('placeholder')) {
-                                  handleImageClick(passportInfo.passportFullCopy, 'passportFullCopy');
+                                if (
+                                  passportInfo.passportFullCopy &&
+                                  !passportInfo.passportFullCopy.includes(
+                                    "placeholder"
+                                  )
+                                ) {
+                                  handleImageClick(
+                                    passportInfo.passportFullCopy,
+                                    "passportFullCopy"
+                                  );
                                 } else {
-                                  setActiveUploadMenu(activeUploadMenu === 'full' ? null : 'full');
+                                  setActiveUploadMenu(
+                                    activeUploadMenu === "full" ? null : "full"
+                                  );
                                 }
                               }}
                             >
-                              {passportInfo.passportFullCopy && !passportInfo.passportFullCopy.includes('placeholder') ? (
+                              {passportInfo.passportFullCopy &&
+                              !passportInfo.passportFullCopy.includes(
+                                "placeholder"
+                              ) ? (
                                 <>
                                   <img
                                     src={passportInfo.passportFullCopy}
@@ -2332,39 +3350,87 @@ const UserDetails = () => {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setPassportInfo({ ...passportInfo, passportFullCopy: "" });
-                                      setImageSources(prev => ({ ...prev, passportFullCopy: null }));
+                                      setPassportInfo({
+                                        ...passportInfo,
+                                        passportFullCopy: "",
+                                      });
+                                      setImageSources((prev) => ({
+                                        ...prev,
+                                        passportFullCopy: null,
+                                      }));
                                     }}
                                     className="absolute top-2 right-2 rounded-full bg-rose-500 p-1.5 text-white shadow-lg transition hover:bg-rose-600"
                                   >
-                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <svg
+                                      className="h-3.5 w-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
                                     </svg>
                                   </button>
                                 </>
                               ) : (
                                 <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                                  <svg className="h-10 w-10 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <svg
+                                    className="h-10 w-10 text-slate-400 mb-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                   </svg>
-                                  <p className="text-xs font-medium text-slate-600 mt-1">Click to upload</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">Gallery or camera</p>
-          </div>
-        )}
-      </div>
-                            {activeUploadMenu === 'full' && (
+                                  <p className="text-xs font-medium text-slate-600 mt-1">
+                                    Click to upload
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-0.5">
+                                    Gallery or camera
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            {activeUploadMenu === "full" && (
                               <div className="absolute top-full left-0 z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl">
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageUpload('passportFullCopy', false);
+                                    handleImageUpload(
+                                      "passportFullCopy",
+                                      false
+                                    );
                                   }}
                                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 first:rounded-t-xl"
                                 >
-                                  <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  <svg
+                                    className="h-5 w-5 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
                                   </svg>
                                   <span>Choose from Gallery</span>
                                 </button>
@@ -2372,13 +3438,28 @@ const UserDetails = () => {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageUpload('passportFullCopy', true);
+                                    handleImageUpload("passportFullCopy", true);
                                   }}
                                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-900 transition hover:bg-slate-50 last:rounded-b-xl"
                                 >
-                                  <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <svg
+                                    className="h-5 w-5 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                   </svg>
                                   <span>Take Photo</span>
                                 </button>
@@ -2393,16 +3474,33 @@ const UserDetails = () => {
                         <div>
                           <div className="mb-2 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                              <svg className="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <svg
+                                className="h-4 w-4 text-slate-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
                               </svg>
                             </div>
                             <div>
-                              <label className="text-sm font-semibold text-slate-900">Front Page</label>
-                              <p className="text-xs text-slate-500">Photo & details page</p>
+                              <label className="text-sm font-semibold text-slate-900">
+                                Front Page
+                              </label>
+                              <p className="text-xs text-slate-500">
+                                Photo & details page
+                              </p>
                             </div>
                           </div>
-                          <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50" style={{ height: "200px" }}>
+                          <div
+                            className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                            style={{ height: "200px" }}
+                          >
                             {profile.passportInfo?.passportFrontImage ? (
                               <img
                                 src={profile.passportInfo.passportFrontImage}
@@ -2414,7 +3512,9 @@ const UserDetails = () => {
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center">
-                                <p className="text-xs text-slate-400">No image uploaded</p>
+                                <p className="text-xs text-slate-400">
+                                  No image uploaded
+                                </p>
                               </div>
                             )}
                           </div>
@@ -2422,16 +3522,33 @@ const UserDetails = () => {
                         <div>
                           <div className="mb-2 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                              <svg className="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <svg
+                                className="h-4 w-4 text-slate-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
                               </svg>
                             </div>
                             <div>
-                              <label className="text-sm font-semibold text-slate-900">Back Page</label>
-                              <p className="text-xs text-slate-500">Visa pages & stamps</p>
+                              <label className="text-sm font-semibold text-slate-900">
+                                Back Page
+                              </label>
+                              <p className="text-xs text-slate-500">
+                                Visa pages & stamps
+                              </p>
                             </div>
                           </div>
-                          <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50" style={{ height: "200px" }}>
+                          <div
+                            className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                            style={{ height: "200px" }}
+                          >
                             {profile.passportInfo?.passportBackImage ? (
                               <img
                                 src={profile.passportInfo.passportBackImage}
@@ -2443,7 +3560,9 @@ const UserDetails = () => {
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center">
-                                <p className="text-xs text-slate-400">No image uploaded</p>
+                                <p className="text-xs text-slate-400">
+                                  No image uploaded
+                                </p>
                               </div>
                             )}
                           </div>
@@ -2451,16 +3570,33 @@ const UserDetails = () => {
                         <div>
                           <div className="mb-2 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                              <svg className="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                              <svg
+                                className="h-4 w-4 text-slate-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                />
                               </svg>
                             </div>
                             <div>
-                              <label className="text-sm font-semibold text-slate-900">Full Document</label>
-                              <p className="text-xs text-slate-500">Complete passport scan</p>
+                              <label className="text-sm font-semibold text-slate-900">
+                                Full Document
+                              </label>
+                              <p className="text-xs text-slate-500">
+                                Complete passport scan
+                              </p>
                             </div>
                           </div>
-                          <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50" style={{ height: "200px" }}>
+                          <div
+                            className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                            style={{ height: "200px" }}
+                          >
                             {profile.passportInfo?.passportFullCopy ? (
                               <img
                                 src={profile.passportInfo.passportFullCopy}
@@ -2472,7 +3608,9 @@ const UserDetails = () => {
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center">
-                                <p className="text-xs text-slate-400">No image uploaded</p>
+                                <p className="text-xs text-slate-400">
+                                  No image uploaded
+                                </p>
                               </div>
                             )}
                           </div>
@@ -2484,11 +3622,22 @@ const UserDetails = () => {
                   {isEditing && (
                     <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 p-3">
                       <div className="flex items-start gap-2">
-                        <svg className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        <svg
+                          className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                         <p className="text-xs text-blue-800">
-                          <span className="font-semibold">Tip:</span> Ensure images are clear, well-lit, and show all passport details. You can upload from your gallery or take a photo directly.
+                          <span className="font-semibold">Tip:</span> Ensure
+                          images are clear, well-lit, and show all passport
+                          details. You can upload from your gallery or take a
+                          photo directly.
                         </p>
                       </div>
                     </div>
@@ -2541,7 +3690,7 @@ const UserDetails = () => {
           onCapture={handleCameraCapture}
           onClose={() => {
             if (cameraModal.stream) {
-              cameraModal.stream.getTracks().forEach(track => track.stop());
+              cameraModal.stream.getTracks().forEach((track) => track.stop());
             }
             setCameraModal({ show: false, fieldName: null, stream: null });
           }}
@@ -2553,7 +3702,9 @@ const UserDetails = () => {
         <ImageCropModal
           imageSrc={cropModal.imageSrc}
           onCrop={handleCropComplete}
-          onClose={() => setCropModal({ show: false, imageSrc: null, fieldName: null })}
+          onClose={() =>
+            setCropModal({ show: false, imageSrc: null, fieldName: null })
+          }
         />
       )}
 
@@ -2563,7 +3714,14 @@ const UserDetails = () => {
           imageSrc={imagePreview.imageSrc}
           onCrop={handleCropFromPreview}
           onUploadNew={handleUploadNewFromPreview}
-          onClose={() => setImagePreview({ show: false, imageSrc: null, fieldName: null, source: null })}
+          onClose={() =>
+            setImagePreview({
+              show: false,
+              imageSrc: null,
+              fieldName: null,
+              source: null,
+            })
+          }
           source={imagePreview.source}
         />
       )}

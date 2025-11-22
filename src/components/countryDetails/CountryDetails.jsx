@@ -9,6 +9,7 @@ import StepsSection from "./StepsSection";
 import FaqSection from "./FaqSection";
 import TripPurposeModal from "./TripPurposeModal";
 import ChecklistModal from "./ChecklistModal";
+import ApplicationFormModal from "./ApplicationFormModal";
 import CountryDetailsService from "../../services/coutryList/countryDetails.services";
 import TripPurposeService from "../../services/tripPurpose/tripPurpose.services";
 import CountryChecklistService from "../../services/countryCheckList/countryCheckList.services";
@@ -46,6 +47,7 @@ const CountryDetails = () => {
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistError, setChecklistError] = useState("");
   const [checklistData, setChecklistData] = useState(null);
+  const [applicationFormModalOpen, setApplicationFormModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchCountryDetails = async () => {
@@ -66,6 +68,7 @@ const CountryDetails = () => {
           const transformedData = {
             _id: data.country._id,
             country: data.country.name,
+            countryCode: data.country.code,
             heroImage: assetUrl(data.country.bannerImage),
             icon: assetUrl(data.country.icon),
             flag: assetUrl(data.country.icon),
@@ -334,6 +337,18 @@ const CountryDetails = () => {
     setChecklistModalOpen(false);
   };
 
+  const handleOpenApplicationForm = () => {
+    // Close checklist modal and open application form modal
+    setChecklistModalOpen(false);
+    setTimeout(() => {
+      setApplicationFormModalOpen(true);
+    }, 100);
+  };
+
+  const handleCloseApplicationForm = () => {
+    setApplicationFormModalOpen(false);
+  };
+
   return (
     <div className="relative bg-[#030920] text-white">
       <HeroSection
@@ -374,6 +389,19 @@ const CountryDetails = () => {
         error={checklistError}
         checklist={checklistData}
         onClose={closeChecklistModal}
+        onOpenApplicationForm={handleOpenApplicationForm}
+        countryId={countryData?._id}
+        countryCode={countryData?.countryCode}
+        tripPurposeId={selectedPurpose?._id}
+        tripPurposeCode={selectedPurpose?.code}
+      />
+      <ApplicationFormModal
+        open={applicationFormModalOpen}
+        onClose={handleCloseApplicationForm}
+        countryId={countryData?._id}
+        countryCode={countryData?.countryCode}
+        tripPurposeId={selectedPurpose?._id}
+        tripPurposeCode={selectedPurpose?.code}
       />
     </div>
   );
