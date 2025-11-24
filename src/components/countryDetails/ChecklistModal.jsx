@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import Swal from "sweetalert2";
 import UploadDocumentService from "../../services/uploadDocument/uploadDocument.services";
-import { env } from "../../utils/env";
+import { resolveFileUrl } from "../../utils/fileUrl";
 
 // Image Crop Modal Component
 const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
@@ -720,23 +720,6 @@ const ChecklistModal = ({
   tripPurposeId,
   tripPurposeCode,
 }) => {
-  const DOCUMENT_BASE_URL = env.baseUrl ?? "https://visa-phase2.itfuturz.in";
-
-  const buildDocumentUrl = (filePath) => {
-    if (!filePath || typeof filePath !== "string") return filePath;
-    if (
-      filePath.startsWith("data:") ||
-      filePath.startsWith("blob:") ||
-      /^https?:\/\//i.test(filePath)
-    ) {
-      return filePath;
-    }
-    const cleanedPath = filePath.startsWith("/")
-      ? filePath.substring(1)
-      : filePath;
-    return `${DOCUMENT_BASE_URL}${cleanedPath}`;
-  };
-
   const ACCEPTED_FILE_TYPES = [
     ".jpg",
     ".jpeg",
@@ -823,7 +806,7 @@ const ChecklistModal = ({
             return {
               id: doc._id,
               name: fileName,
-              url: buildDocumentUrl(doc.fileUrl),
+              url: resolveFileUrl(doc.fileUrl),
               status: "success",
               documentId: doc._id,
               file: null, // No file object for documents from API
@@ -1345,7 +1328,7 @@ const ChecklistModal = ({
   // Handle document preview
   const handlePreviewDocument = (file) => {
     if (!file) return;
-    const normalizedUrl = buildDocumentUrl(file.url);
+   const normalizedUrl = resolveFileUrl(file.url);
     if (normalizedUrl) {
       setPreviewModal({
         show: true,

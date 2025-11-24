@@ -3,6 +3,7 @@ import DocumentDetailsListService from '../../services/documentDetailsList/docum
 import VisaApplyListService from '../../services/visaApplyList/visaApplyList.services';
 import Loader from '../Loader';
 import { env } from '../../utils/env';
+import { resolveFileUrl } from '../../utils/fileUrl';
 
 const DocumentDetailsSection = () => {
   const [applicationDetails, setApplicationDetails] = useState(null);
@@ -13,17 +14,8 @@ const DocumentDetailsSection = () => {
 
   const DOCUMENT_BASE_URL = env.baseUrl ?? 'https://visa-phase2.itfuturz.in';
 
-  const buildDocumentUrl = (filePath) => {
-    if (!filePath) return null;
-    if (/^https?:\/\//i.test(filePath)) {
-      return filePath;
-    }
-    const cleanedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-    return `${DOCUMENT_BASE_URL}${cleanedPath}`;
-  };
-
   const handleViewDocument = (doc) => {
-    const url = buildDocumentUrl(doc.fileUrl);
+    const url = resolveFileUrl(doc.fileUrl, DOCUMENT_BASE_URL);
     if (!url) return;
 
     setPreviewDocument({
