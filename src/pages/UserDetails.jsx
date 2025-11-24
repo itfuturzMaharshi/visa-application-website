@@ -7,6 +7,7 @@ import Loader from "../components/Loader";
 import SidebarNavigation from "../components/userDetails/SidebarNavigation";
 import ApplicationsListSection from "../components/userDetails/ApplicationsListSection";
 import DocumentDetailsSection from "../components/userDetails/DocumentDetailsSection";
+import { env } from "../utils/env";
 
 // Image Crop Modal Component
 const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
@@ -1643,7 +1644,7 @@ const UserDetails = () => {
             profilePicUrl = userData.profilePic;
           } else {
             // Get base URL from API config
-            const baseURL = import.meta.env?.VITE_API_BASE_URL || 'visa-phase2.itfuturz.in';
+            const baseURL = env.baseUrl || 'https://visa-phase2.itfuturz.in';
             profilePicUrl = `${baseURL}/${userData.profilePic}`;
           }
         }

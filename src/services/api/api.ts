@@ -4,7 +4,7 @@ import axios from 'axios';
 import { env } from '../../utils/env';
 
 const api = axios.create({
-  baseURL: env.baseUrl || 'visa-phase2.itfuturz.in',
+  baseURL: env.baseUrl,
   timeout: 10000,
 });
 

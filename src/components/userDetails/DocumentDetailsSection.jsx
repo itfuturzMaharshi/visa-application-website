@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DocumentDetailsListService from '../../services/documentDetailsList/documentDetailsList.services';
 import VisaApplyListService from '../../services/visaApplyList/visaApplyList.services';
 import Loader from '../Loader';
+import { env } from '../../utils/env';
 
 const DocumentDetailsSection = () => {
   const [applicationDetails, setApplicationDetails] = useState(null);
@@ -10,8 +11,7 @@ const DocumentDetailsSection = () => {
   const [previewDocument, setPreviewDocument] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // const DOCUMENT_BASE_URL = 'https://9zqwrzw6-2030.inc1.devtunnels.ms/';
-  const DOCUMENT_BASE_URL = "visa-phase2.itfuturz.in";
+  const DOCUMENT_BASE_URL = env.baseUrl ?? 'https://visa-phase2.itfuturz.in';
 
   const buildDocumentUrl = (filePath) => {
     if (!filePath) return null;

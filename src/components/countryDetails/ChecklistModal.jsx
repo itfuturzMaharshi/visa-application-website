@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import Swal from "sweetalert2";
 import UploadDocumentService from "../../services/uploadDocument/uploadDocument.services";
+import { env } from "../../utils/env";
 
 // Image Crop Modal Component
 const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
@@ -719,8 +720,7 @@ const ChecklistModal = ({
   tripPurposeId,
   tripPurposeCode,
 }) => {
-  // const DOCUMENT_BASE_URL = "https://9zqwrzw6-2030.inc1.devtunnels.ms/";
-  const DOCUMENT_BASE_URL = "visa-phase2.itfuturz.in";
+  const DOCUMENT_BASE_URL = env.baseUrl ?? "https://visa-phase2.itfuturz.in";
 
   const buildDocumentUrl = (filePath) => {
     if (!filePath || typeof filePath !== "string") return filePath;
