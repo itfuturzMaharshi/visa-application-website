@@ -5,7 +5,8 @@ import { env } from '../../utils/env';
 
 const ApplicationsListSection = () => {
   // Base URL for images
-  const BASE_URL = env.baseUrl || 'https://9zqwrzw6-2030.inc1.devtunnels.ms';
+  // const BASE_URL = env.baseUrl || 'https://9zqwrzw6-2030.inc1.devtunnels.ms';
+  const BASE_URL = env.baseUrl || "visa-phase2.itfuturz.in";
 
   // Helper function to get full image URL
   const getImageUrl = (imagePath) => {

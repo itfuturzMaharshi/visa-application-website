@@ -1643,7 +1643,7 @@ const UserDetails = () => {
             profilePicUrl = userData.profilePic;
           } else {
             // Get base URL from API config
-            const baseURL = import.meta.env?.VITE_API_BASE_URL || 'https://9zqwrzw6-2030.inc1.devtunnels.ms';
+            const baseURL = import.meta.env?.VITE_API_BASE_URL || 'visa-phase2.itfuturz.in';
             profilePicUrl = `${baseURL}/${userData.profilePic}`;
           }
         }

@@ -10,7 +10,8 @@ const DocumentDetailsSection = () => {
   const [previewDocument, setPreviewDocument] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const DOCUMENT_BASE_URL = 'https://9zqwrzw6-2030.inc1.devtunnels.ms/';
+  // const DOCUMENT_BASE_URL = 'https://9zqwrzw6-2030.inc1.devtunnels.ms/';
+  const DOCUMENT_BASE_URL = "visa-phase2.itfuturz.in";
 
   const buildDocumentUrl = (filePath) => {
     if (!filePath) return null;
