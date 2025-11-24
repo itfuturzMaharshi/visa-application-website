@@ -731,6 +731,38 @@ const ChecklistModal = ({
   ];
   const ACCEPTED_FORMATS = ["jpg", "jpeg", "png", "pdf"];
 
+  const redirectToLogin = () => {
+    try {
+      const hashPath = window.location.hash?.slice(1) || "/home";
+      const normalizedPath = hashPath.startsWith("/")
+        ? hashPath
+        : `/${hashPath}`;
+      const returnTo = encodeURIComponent(normalizedPath);
+      window.location.href = `/#/login?returnTo=${returnTo}`;
+    } catch (err) {
+      console.error("Redirect error:", err);
+      window.location.href = "/#/login";
+    }
+  };
+
+  const ensureAuthenticated = () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      return true;
+    }
+
+    Swal.fire({
+      icon: "warning",
+      title: "Please login first",
+      text: "You need to login before uploading documents.",
+      confirmButtonColor: "#0f172a",
+    }).then(() => {
+      redirectToLogin();
+    });
+
+    return false;
+  };
+
   const sanitizeExtension = (extension) => {
     if (!extension) return "";
     const normalized = extension.replace(/^\./, "").toLowerCase();
@@ -949,6 +981,9 @@ const ChecklistModal = ({
 
   // Handle file upload
   const handleUpload = async (file, itemId) => {
+    if (!ensureAuthenticated()) {
+      return;
+    }
     const item = checklist?.items?.find((i) => i._id === itemId);
     if (!item) return;
 
@@ -1069,6 +1104,9 @@ const ChecklistModal = ({
 
   // Handle image upload (gallery or camera)
   const handleImageUpload = (itemId, useCamera = false) => {
+    if (!ensureAuthenticated()) {
+      return;
+    }
     if (useCamera) {
       // Check if we're on HTTPS or localhost
       const isSecureContext =
@@ -1251,6 +1289,9 @@ const ChecklistModal = ({
 
   // Handle file upload (non-image files)
   const handleFileUpload = (itemId) => {
+    if (!ensureAuthenticated()) {
+      return;
+    }
     const item = checklist?.items?.find((i) => i._id === itemId);
     if (!item) return;
 

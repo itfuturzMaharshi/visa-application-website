@@ -13,12 +13,16 @@ const navLinks = [
 const HeaderUserMenu = ({ onNavigate }) => {
   const [open, setOpen] = useState(false);
   const [userName, setUserName] = useState("Guest");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const token = localStorage.getItem("token");
+    
+    if (storedUser && token) {
+      setIsLoggedIn(true);
       try {
         const parsed = JSON.parse(storedUser);
         if (parsed?.fullName) {
@@ -29,6 +33,8 @@ const HeaderUserMenu = ({ onNavigate }) => {
       } catch {
         setUserName("Traveler");
       }
+    } else {
+      setIsLoggedIn(false);
     }
   }, []);
 
@@ -66,10 +72,22 @@ const HeaderUserMenu = ({ onNavigate }) => {
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      setIsLoggedIn(false);
       navigate("/login");
       onNavigate?.();
     }
   };
+
+  if (!isLoggedIn) {
+    return (
+      <button
+        onClick={() => navigate("/login")}
+        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+      >
+        Login
+      </button>
+    );
+  }
 
   return (
     <div className="relative" ref={menuRef}>
