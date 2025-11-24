@@ -7,6 +7,35 @@ const DocumentDetailsSection = () => {
   const [applicationDetails, setApplicationDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const DOCUMENT_BASE_URL = 'https://9zqwrzw6-2030.inc1.devtunnels.ms/';
+
+  const buildDocumentUrl = (filePath) => {
+    if (!filePath) return null;
+    if (/^https?:\/\//i.test(filePath)) {
+      return filePath;
+    }
+    const cleanedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    return `${DOCUMENT_BASE_URL}${cleanedPath}`;
+  };
+
+  const handleViewDocument = (doc) => {
+    const url = buildDocumentUrl(doc.fileUrl);
+    if (!url) return;
+
+    setPreviewDocument({
+      title: doc.checklistItem?.title || doc.documentType || 'Document',
+      url,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setPreviewDocument(null);
+  };
 
   useEffect(() => {
     fetchDocumentDetails();
@@ -139,7 +168,7 @@ const DocumentDetailsSection = () => {
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
           <div className="flex items-start gap-3">
             <svg
-              className="h-5 w-5 text-rose-600 mt-0.5 flex-shrink-0"
+              className="h-5 w-5 text-rose-600 mt-0.5 shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -238,14 +267,13 @@ const DocumentDetailsSection = () => {
                         </div>
                       </div>
                       {doc.fileUrl && (
-                        <a
-                          href={doc.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+                        <button
+                          type="button"
+                          onClick={() => handleViewDocument(doc)}
+                          className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
                         >
                           View
-                        </a>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -307,6 +335,45 @@ const DocumentDetailsSection = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {isModalOpen && previewDocument && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-8"
+          onClick={closeModal}
+        >
+          <div
+            className="relative w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500">Document Preview</p>
+                <h4 className="text-xl font-semibold text-slate-900">{previewDocument.title}</h4>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Close preview"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-4 h-[70vh] rounded-xl border border-slate-200">
+              <iframe
+                src={previewDocument.url}
+                title={previewDocument.title}
+                className="h-full w-full rounded-xl"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

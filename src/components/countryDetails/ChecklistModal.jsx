@@ -719,6 +719,43 @@ const ChecklistModal = ({
   tripPurposeId,
   tripPurposeCode,
 }) => {
+  const DOCUMENT_BASE_URL = "https://9zqwrzw6-2030.inc1.devtunnels.ms/";
+
+  const buildDocumentUrl = (filePath) => {
+    if (!filePath || typeof filePath !== "string") return filePath;
+    if (
+      filePath.startsWith("data:") ||
+      filePath.startsWith("blob:") ||
+      /^https?:\/\//i.test(filePath)
+    ) {
+      return filePath;
+    }
+    const cleanedPath = filePath.startsWith("/")
+      ? filePath.substring(1)
+      : filePath;
+    return `${DOCUMENT_BASE_URL}${cleanedPath}`;
+  };
+
+  const ACCEPTED_FILE_TYPES = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".pdf",
+    "image/jpeg",
+    "image/png",
+    "application/pdf",
+  ];
+  const ACCEPTED_FORMATS = ["jpg", "jpeg", "png", "pdf"];
+
+  const sanitizeExtension = (extension) => {
+    if (!extension) return "";
+    const normalized = extension.replace(/^\./, "").toLowerCase();
+    if (normalized === "jpeg") {
+      return "jpg";
+    }
+    return normalized;
+  };
+
   const [activeUploadMenu, setActiveUploadMenu] = useState(null);
   const [cropModal, setCropModal] = useState({
     show: false,
@@ -785,7 +822,7 @@ const ChecklistModal = ({
             return {
               id: doc._id,
               name: fileName,
-              url: doc.fileUrl,
+              url: buildDocumentUrl(doc.fileUrl),
               status: "success",
               documentId: doc._id,
               file: null, // No file object for documents from API
@@ -843,24 +880,32 @@ const ChecklistModal = ({
     }
 
     // Validate file format
-    if (item.fileFormat) {
-      const allowedFormats = item.fileFormat
-        .split(",")
-        .map((format) => format.trim().toLowerCase())
-        .filter(Boolean);
-      
-      const fileName = file.name || "";
-      const fileExtension = fileName
-        .split(".")
-        .pop()
-        ?.toLowerCase();
-      
-      if (fileExtension && !allowedFormats.includes(fileExtension)) {
-        return {
-          valid: false,
-          message: `Invalid file format. Allowed formats: ${allowedFormats.join(", ")}`,
-        };
-      }
+    const allowedFormats = item.fileFormat
+      ? item.fileFormat
+          .split(",")
+          .map((format) => sanitizeExtension(format.trim().toLowerCase()))
+          .filter(Boolean)
+      : [...ACCEPTED_FORMATS];
+
+    const fileName = file.name || "";
+    const fileExtension = sanitizeExtension(
+      fileName.split(".").pop()?.toLowerCase() || ""
+    );
+
+    if (
+      fileExtension &&
+      !allowedFormats.includes(fileExtension) &&
+      !ACCEPTED_FORMATS.includes(fileExtension)
+    ) {
+      const formatsToShow = allowedFormats.length
+        ? allowedFormats
+        : ACCEPTED_FORMATS;
+      return {
+        valid: false,
+        message: `Invalid file format. Allowed formats: ${formatsToShow
+          .map((fmt) => (fmt === "jpg" ? "JPG/JPEG" : fmt.toUpperCase()))
+          .join(", ")}`,
+      };
     }
 
     // Validate file size (only if file has size property)
@@ -905,7 +950,17 @@ const ChecklistModal = ({
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
     const byteArray = new Uint8Array(byteNumbers);
-    return new File([byteArray], filename, { type: mimeType });
+    const baseName = filename?.replace(/\.[^/.]+$/, "") || "document";
+    const extensionFromName = sanitizeExtension(
+      filename?.split(".").pop() || ""
+    );
+    const extensionFromMime = sanitizeExtension(mimeType?.split("/")?.[1]);
+    const finalExtension =
+      extensionFromName || extensionFromMime || "jpg";
+    const finalName = `${baseName}.${finalExtension}`;
+    return new File([byteArray], finalName, {
+      type: mimeType || `image/${finalExtension === "pdf" ? "pdf" : finalExtension}`,
+    });
   };
 
   // Handle file upload
@@ -917,7 +972,7 @@ const ChecklistModal = ({
     let fileObj = file;
     if (typeof file === "string" && file.startsWith("data:")) {
       const mimeType = file.match(/data:([^;]+);/)?.[1] || "image/jpeg";
-      const extension = mimeType.split("/")[1] || "jpg";
+      const extension = sanitizeExtension(mimeType.split("/")[1] || "jpg");
       fileObj = base64ToFile(
         file,
         `${item.title || "document"}.${extension}`,
@@ -962,11 +1017,11 @@ const ChecklistModal = ({
       // Convert to File if it's a base64 string
       let fileToUpload = fileObj;
       if (typeof file === "string" && file.startsWith("data:")) {
-        const mimeType = file.match(/data:([^;]+);/)?.[1] || "image/jpeg";
-        const extension = mimeType.split("/")[1] || "jpg";
+      const mimeType = file.match(/data:([^;]+);/)?.[1] || "image/jpeg";
+      const extension = sanitizeExtension(mimeType.split("/")[1] || "jpg");
         fileToUpload = base64ToFile(
           file,
-          `${item.title || "document"}.${extension}`,
+        `${item.title || "document"}.${extension}`,
           mimeType
         );
       }
@@ -1136,7 +1191,7 @@ const ChecklistModal = ({
   const openFileInputForGallery = (itemId) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = ACCEPTED_FILE_TYPES.join(",");
     input.onchange = (e) => {
       const file = e.target.files?.[0];
       if (file) {
@@ -1167,7 +1222,7 @@ const ChecklistModal = ({
   const openFileInputWithCamera = (itemId) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = ACCEPTED_FILE_TYPES.join(",");
     input.setAttribute("capture", "environment");
 
     input.onchange = (e) => {
@@ -1222,6 +1277,8 @@ const ChecklistModal = ({
     if (item.fileFormat) {
       const formats = item.fileFormat.split(",").map((f) => `.${f.trim()}`);
       input.accept = formats.join(",");
+    } else {
+      input.accept = ACCEPTED_FILE_TYPES.join(",");
     }
 
     input.onchange = (e) => {
@@ -1286,8 +1343,16 @@ const ChecklistModal = ({
 
   // Handle document preview
   const handlePreviewDocument = (file) => {
-    if (file.url) {
-      setPreviewModal({ show: true, file });
+    if (!file) return;
+    const normalizedUrl = buildDocumentUrl(file.url);
+    if (normalizedUrl) {
+      setPreviewModal({
+        show: true,
+        file: {
+          ...file,
+          url: normalizedUrl,
+        },
+      });
     }
   };
 
