@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthService from "../services/auth/auth.services";
 
 const navLinks = [
-  { label: "Home", to: "/" },
-  { label: "Destinations", to: "#destinations" },
-  { label: "Pricing", to: "#pricing" },
-  { label: "Apply Now", to: "#hero" },
-  { label: "Contact", to: "#contact" },
+  { label: "Home", type: "route", to: "/" },
+  { label: "Destinations", type: "section", sectionId: "destinations" },
+  { label: "Pricing", type: "section", sectionId: "pricing" },
+  { label: "Apply Now", type: "section", sectionId: "hero" },
+  { label: "Contact", type: "section", sectionId: "contact" },
 ];
 
 const HeaderUserMenu = ({ onNavigate }) => {
@@ -154,7 +154,7 @@ const HeaderUserMenu = ({ onNavigate }) => {
   );
 };
 
-const MobileNav = ({ open, onClose }) => (
+const MobileNav = ({ open, onClose, onSectionNavigate }) => (
   <>
     <div
       className={`fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
@@ -178,16 +178,30 @@ const MobileNav = ({ open, onClose }) => (
         </button>
       </div>
       <nav className="mt-8 flex flex-col gap-4 text-base font-medium text-slate-700">
-        {navLinks.map((link) => (
-          <Link
-            key={link.label}
-            to={link.to}
-            className="rounded-lg px-3 py-2 transition hover:bg-slate-100"
-            onClick={onClose}
-          >
-            {link.label}
-          </Link>
-        ))}
+        {navLinks.map((link) =>
+          link.type === "route" ? (
+            <Link
+              key={link.label}
+              to={link.to}
+              className="rounded-lg px-3 py-2 transition hover:bg-slate-100"
+              onClick={onClose}
+            >
+              {link.label}
+            </Link>
+          ) : (
+            <button
+              key={link.label}
+              type="button"
+              className="text-left rounded-lg px-3 py-2 transition hover:bg-slate-100"
+              onClick={() => {
+                onSectionNavigate?.(link.sectionId);
+                onClose();
+              }}
+            >
+              {link.label}
+            </button>
+          )
+        )}
       </nav>
       <div className="mt-10 rounded-2xl bg-slate-50 p-4">
         <p className="text-sm text-slate-600">
@@ -203,6 +217,38 @@ const MobileNav = ({ open, onClose }) => (
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const scrollToSection = useCallback((sectionId) => {
+    if (!sectionId) return;
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname === "/" && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      requestAnimationFrame(() => {
+        scrollToSection(sectionId);
+        navigate(location.pathname, { replace: true, state: null });
+      });
+    }
+  }, [location, navigate, scrollToSection]);
+
+  const handleSectionNavigate = useCallback(
+    (sectionId) => {
+      if (!sectionId) return;
+      if (location.pathname !== "/") {
+        navigate("/", { state: { scrollTo: sectionId } });
+      } else {
+        scrollToSection(sectionId);
+      }
+    },
+    [location.pathname, navigate, scrollToSection]
+  );
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -232,15 +278,26 @@ const Header = () => {
               </div>
             </Link>
             <nav className="hidden items-center gap-6 text-sm font-medium text-blue-100/90 md:flex">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  className="relative after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-white after:transition-transform hover:text-white hover:after:scale-x-100"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) =>
+                link.type === "route" ? (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    className="relative after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-white after:transition-transform hover:text-white hover:after:scale-x-100"
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <button
+                    key={link.label}
+                    type="button"
+                    onClick={() => handleSectionNavigate(link.sectionId)}
+                    className="relative text-left after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-white after:transition-transform hover:text-white hover:after:scale-x-100"
+                  >
+                    {link.label}
+                  </button>
+                )
+              )}
             </nav>
             <div className="flex items-center gap-3">
               <HeaderUserMenu />
@@ -257,7 +314,11 @@ const Header = () => {
           </div>
         </div>
       </header>
-      <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileNav
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onSectionNavigate={handleSectionNavigate}
+      />
     </>
   );
 };
