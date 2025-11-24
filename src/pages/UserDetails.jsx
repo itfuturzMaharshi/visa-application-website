@@ -4,6 +4,9 @@ import Swal from "sweetalert2";
 import UserProfileService from "../services/userProfile/userProfile.services";
 import CountryCodeSelect from "../components/CountryCodeSelect";
 import Loader from "../components/Loader";
+import SidebarNavigation from "../components/userDetails/SidebarNavigation";
+import ApplicationsListSection from "../components/userDetails/ApplicationsListSection";
+import DocumentDetailsSection from "../components/userDetails/DocumentDetailsSection";
 
 // Image Crop Modal Component
 const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
@@ -950,7 +953,7 @@ const ImageUpload = ({
   value,
   onChange,
   label,
-  placeholder = "https://via.placeholder.com/400x300?text=No+Image",
+  placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%2394a3b8'%3ENo Image%3C/text%3E%3C/svg%3E",
   className = "",
   aspectRatio = "auto",
 }) => {
@@ -959,7 +962,14 @@ const ImageUpload = ({
   const [preview, setPreview] = useState(value || placeholder);
 
   useEffect(() => {
-    setPreview(value || placeholder);
+    // If value is a File object, create object URL; otherwise use value directly
+    if (value instanceof File) {
+      const objectUrl = URL.createObjectURL(value);
+      setPreview(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    } else {
+      setPreview(value || placeholder);
+    }
   }, [value, placeholder]);
 
   const handleFileSelect = (file) => {
@@ -987,21 +997,11 @@ const ImageUpload = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result;
-      setPreview(base64String);
-      onChange(base64String);
-    };
-    reader.onerror = () => {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to read the image file.",
-        confirmButtonColor: "#0f172a",
-      });
-    };
-    reader.readAsDataURL(file);
+    // Create preview URL for display, but pass File object to onChange
+    const previewUrl = URL.createObjectURL(file);
+    setPreview(previewUrl);
+    // Pass the File object instead of base64
+    onChange(file);
     setShowOptions(false);
   };
 
@@ -1026,12 +1026,19 @@ const ImageUpload = ({
 
   const handleRemove = (e) => {
     e.stopPropagation();
+    // Revoke object URL if it was created from a File
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
     setPreview(placeholder);
     onChange("");
   };
 
   const hasImage =
-    value && value !== placeholder && !value.includes("placeholder");
+    value && 
+    value !== placeholder && 
+    !(typeof value === 'string' && value.includes("placeholder")) &&
+    (value instanceof File ? value.type.startsWith("image/") : true);
 
   return (
     <div className={className}>
@@ -1185,7 +1192,7 @@ const UserDetails = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeSection, setActiveSection] = useState("basic");
   const navigate = useNavigate();
 
   // Form states
@@ -1628,6 +1635,19 @@ const UserDetails = () => {
         const userData = response.data;
         setProfile(userData);
 
+        // Construct full URL for profile picture if it's a relative path
+        let profilePicUrl = "";
+        if (userData.profilePic) {
+          // If it's already a full URL, use it; otherwise construct from base URL
+          if (userData.profilePic.startsWith("http://") || userData.profilePic.startsWith("https://")) {
+            profilePicUrl = userData.profilePic;
+          } else {
+            // Get base URL from API config
+            const baseURL = import.meta.env?.VITE_API_BASE_URL || 'https://9zqwrzw6-2030.inc1.devtunnels.ms';
+            profilePicUrl = `${baseURL}/${userData.profilePic}`;
+          }
+        }
+
         // Populate form fields
         setBasicInfo({
           fullName: userData.fullName || "",
@@ -1640,7 +1660,7 @@ const UserDetails = () => {
           gender: userData.gender || "",
           city: userData.city || "",
           company_name: userData.company_name || "",
-          profilePic: userData.profilePic || "",
+          profilePic: profilePicUrl,
         });
 
         setAddress({
@@ -2019,35 +2039,78 @@ const UserDetails = () => {
     setSaving(true);
     try {
       const cleanedPhone = basicInfo.mobile_number.replace(/\s|-/g, "");
-      const updateData = {
-        fullName: basicInfo.fullName,
-        email: basicInfo.email,
-        countryCode: basicInfo.countryCode.replace("+", ""),
-        mobile_number: cleanedPhone,
-        date_of_birth: basicInfo.date_of_birth || undefined,
-        gender: basicInfo.gender || undefined,
-        city: basicInfo.city || undefined,
-        company_name: basicInfo.company_name || undefined,
-        profilePic: basicInfo.profilePic || undefined,
-        address: {
+      
+      // Check if profilePic is a File object (new upload)
+      const hasFileUpload = basicInfo.profilePic instanceof File;
+      
+      if (hasFileUpload) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('fullName', basicInfo.fullName);
+        formData.append('email', basicInfo.email);
+        formData.append('countryCode', basicInfo.countryCode.replace("+", ""));
+        formData.append('mobile_number', cleanedPhone);
+        if (basicInfo.date_of_birth) formData.append('date_of_birth', basicInfo.date_of_birth);
+        if (basicInfo.gender) formData.append('gender', basicInfo.gender);
+        if (basicInfo.city) formData.append('city', basicInfo.city);
+        if (basicInfo.company_name) formData.append('company_name', basicInfo.company_name);
+        
+        // Append the file
+        formData.append('profilePic', basicInfo.profilePic);
+        
+        // Append address as JSON string
+        const addressData = {
           street: address.street || undefined,
           city: address.city || undefined,
           state: address.state || undefined,
           country: address.country || undefined,
           zipCode: address.zipCode || undefined,
-        },
-      };
+        };
+        formData.append('address', JSON.stringify(addressData));
 
-      const response = await UserProfileService.updateProfile(updateData);
-      if (response?.success) {
-        await Swal.fire({
-          icon: "success",
-          title: "Profile Updated!",
-          text: "Your profile has been updated successfully.",
-          confirmButtonColor: "#0f172a",
-        });
-        setIsEditing(false);
-        await fetchProfile();
+        const response = await UserProfileService.updateProfileWithFormData(formData);
+        if (response?.success) {
+          await Swal.fire({
+            icon: "success",
+            title: "Profile Updated!",
+            text: "Your profile has been updated successfully.",
+            confirmButtonColor: "#0f172a",
+          });
+          setIsEditing(false);
+          await fetchProfile();
+        }
+      } else {
+        // Use regular JSON for non-file updates
+        const updateData = {
+          fullName: basicInfo.fullName,
+          email: basicInfo.email,
+          countryCode: basicInfo.countryCode.replace("+", ""),
+          mobile_number: cleanedPhone,
+          date_of_birth: basicInfo.date_of_birth || undefined,
+          gender: basicInfo.gender || undefined,
+          city: basicInfo.city || undefined,
+          company_name: basicInfo.company_name || undefined,
+          profilePic: basicInfo.profilePic || undefined,
+          address: {
+            street: address.street || undefined,
+            city: address.city || undefined,
+            state: address.state || undefined,
+            country: address.country || undefined,
+            zipCode: address.zipCode || undefined,
+          },
+        };
+
+        const response = await UserProfileService.updateProfile(updateData);
+        if (response?.success) {
+          await Swal.fire({
+            icon: "success",
+            title: "Profile Updated!",
+            text: "Your profile has been updated successfully.",
+            confirmButtonColor: "#0f172a",
+          });
+          setIsEditing(false);
+          await fetchProfile();
+        }
       }
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -2192,16 +2255,17 @@ const UserDetails = () => {
     );
   }
 
+  // Use SVG data URI as placeholder to avoid external requests
   const profilePlaceholder =
-    "https://via.placeholder.com/200x200?text=Profile+Photo";
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%2394a3b8'%3EProfile Photo%3C/text%3E%3C/svg%3E";
   const passportPlaceholder =
-    "https://via.placeholder.com/400x300?text=Passport+Image";
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%2394a3b8'%3EPassport Image%3C/text%3E%3C/svg%3E";
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-6xl space-y-6">
+      <div className="mx-auto w-full max-w-7xl">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-indigo-600">
               User Profile
@@ -2213,7 +2277,7 @@ const UserDetails = () => {
               Manage your personal information and passport details
             </p>
           </div>
-          {!isEditing && (
+          {!isEditing && (activeSection === "basic" || activeSection === "address" || activeSection === "passport") && (
             <button
               onClick={() => setIsEditing(true)}
               className="flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
@@ -2236,94 +2300,83 @@ const UserDetails = () => {
           )}
         </div>
 
-        {/* Profile Card */}
-        <div className="rounded-3xl bg-white p-6 shadow-lg sm:p-8">
-          {/* Profile Header */}
-          <div className="flex flex-col items-center gap-4 border-b border-slate-200 pb-6 sm:flex-row">
-            <div className="relative">
-              {isEditing ? (
-                <ImageUpload
-                  value={basicInfo.profilePic}
-                  onChange={(value) =>
-                    setBasicInfo({ ...basicInfo, profilePic: value })
-                  }
-                  placeholder={profilePlaceholder}
-                  aspectRatio="square"
-                  className="w-24"
-                />
-              ) : (
-                <div className="h-24 w-24 overflow-hidden rounded-full bg-gradient-to-br from-indigo-400 to-purple-500">
-                  {basicInfo.profilePic ? (
-                    <img
-                      src={basicInfo.profilePic}
-                      alt={profile.fullName}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.target.src = profilePlaceholder;
-                      }}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
-                      {profile.fullName.charAt(0).toUpperCase()}
+        {/* Main Layout: Sidebar + Content */}
+        <div className="flex flex-col gap-6 lg:flex-row">
+          {/* Sidebar Navigation */}
+          <SidebarNavigation
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+          />
+
+          {/* Content Area */}
+          <div className="flex-1">
+            <div className="rounded-3xl bg-white p-6 shadow-lg sm:p-8">
+              {/* Profile Header - Only show for basic/address/passport sections */}
+              {(activeSection === "basic" || activeSection === "address" || activeSection === "passport") && (
+                <div className="mb-6 flex flex-col items-center gap-4 border-b border-slate-200 pb-6 sm:flex-row">
+                  <div className="relative">
+                    {isEditing ? (
+                      <ImageUpload
+                        value={basicInfo.profilePic}
+                        onChange={(value) =>
+                          setBasicInfo({ ...basicInfo, profilePic: value })
+                        }
+                        placeholder={profilePlaceholder}
+                        aspectRatio="square"
+                        className="w-24"
+                      />
+                    ) : (
+                      <div className="h-24 w-24 overflow-hidden rounded-full bg-gradient-to-br from-indigo-400 to-purple-500">
+                        {basicInfo.profilePic ? (
+                          <img
+                            src={basicInfo.profilePic}
+                            alt={profile.fullName}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.target.src = profilePlaceholder;
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
+                            {profile.fullName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-2xl font-bold text-slate-900">
+                      {profile.fullName}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">{profile.email}</p>
+                    <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                        <svg
+                          className="h-3 w-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        {profile.isVerified ? "Verified" : "Unverified"}
+                      </span>
+                      {profile.isSubscribed && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700">
+                          Subscribed
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h2 className="text-2xl font-bold text-slate-900">
-                {profile.fullName}
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">{profile.email}</p>
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                  <svg
-                    className="h-3 w-3"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {profile.isVerified ? "Verified" : "Unverified"}
-                </span>
-                {profile.isSubscribed && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700">
-                    Subscribed
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Tabs */}
-          <div className="mt-6 border-b border-slate-200">
-            <nav className="-mb-px flex space-x-4">
-              {["basic", "address", "passport"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition ${
-                    activeTab === tab
-                      ? "border-indigo-600 text-indigo-600"
-                      : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                  }`}
-                >
-                  {tab === "basic" && "Basic Information"}
-                  {tab === "address" && "Address"}
-                  {tab === "passport" && "Passport Details"}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          <div className="mt-6">
-            {/* Basic Information Tab */}
-            {activeTab === "basic" && (
+              {/* Section Content */}
+              {/* Basic Information Section */}
+              {activeSection === "basic" && (
               <div className="space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div>
@@ -2558,8 +2611,8 @@ const UserDetails = () => {
               </div>
             )}
 
-            {/* Address Tab */}
-            {activeTab === "address" && (
+              {/* Address Section */}
+              {activeSection === "address" && (
               <div className="space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div className="sm:col-span-2">
@@ -2683,8 +2736,8 @@ const UserDetails = () => {
               </div>
             )}
 
-            {/* Passport Tab */}
-            {activeTab === "passport" && (
+              {/* Passport Section */}
+              {activeSection === "passport" && (
               <div className="space-y-6">
                 <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4">
                   <div className="flex items-start gap-3">
@@ -3646,38 +3699,49 @@ const UserDetails = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
-            {isEditing && (
-              <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
-                <button
-                  onClick={handleCancel}
-                  disabled={saving}
-                  className="rounded-2xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (activeTab === "passport") {
-                      handleUpdatePassport();
-                    } else {
-                      handleUpdateProfile();
-                    }
-                  }}
-                  disabled={saving}
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50"
-                >
-                  {saving ? (
-                    <>
-                      <Loader size="sm" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </button>
-              </div>
-            )}
+              {/* Action Buttons */}
+              {isEditing && (activeSection === "basic" || activeSection === "address" || activeSection === "passport") && (
+                <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+                  <button
+                    onClick={handleCancel}
+                    disabled={saving}
+                    className="rounded-2xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (activeSection === "passport") {
+                        handleUpdatePassport();
+                      } else {
+                        handleUpdateProfile();
+                      }
+                    }}
+                    disabled={saving}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <>
+                        <Loader size="sm" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Applications List Section */}
+              {activeSection === "list" && (
+                <ApplicationsListSection />
+              )}
+
+              {/* Document Details Section */}
+              {activeSection === "documents" && (
+                <DocumentDetailsSection />
+              )}
+            </div>
           </div>
         </div>
       </div>

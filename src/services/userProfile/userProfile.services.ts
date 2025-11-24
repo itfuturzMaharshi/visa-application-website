@@ -123,6 +123,32 @@ export class UserProfileService {
     }
   }
 
+  static async updateProfileWithFormData(
+    formData: FormData
+  ): Promise<UserProfileResponse<UserProfileData>> {
+    try {
+      const response = await api.post('/mobile/profile/update', formData);
+      const ok = response.data?.success === true || response.data?.status === 200;
+      if (!ok) {
+        toastHelper.showTost(
+          response.data?.message || 'Failed to update profile',
+          'error'
+        );
+      } else {
+        toastHelper.showTost(
+          response.data?.message || 'Profile updated successfully',
+          'success'
+        );
+      }
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message || 'Failed to update profile. Please try again.';
+      toastHelper.showTost(message, 'error');
+      throw error;
+    }
+  }
+
   static async updatePassport(
     data: UpdatePassportRequest
   ): Promise<UserProfileResponse<UserProfileData>> {

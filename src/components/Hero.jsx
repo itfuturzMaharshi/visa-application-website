@@ -3,6 +3,7 @@ import CountryListService from "../services/coutryList/countryList.services";
 import TripPurposeService from "../services/tripPurpose/tripPurpose.services";
 import CountryChecklistService from "../services/countryCheckList/countryCheckList.services";
 import ChecklistModal from "./countryDetails/ChecklistModal";
+import ApplicationFormModal from "./countryDetails/ApplicationFormModal";
 
 const heroSlides = [
   {
@@ -57,6 +58,8 @@ const Hero = () => {
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistError, setChecklistError] = useState("");
   const [checklistData, setChecklistData] = useState(null);
+  const [applicationFormModalOpen, setApplicationFormModalOpen] = useState(false);
+  const [selectedPurpose, setSelectedPurpose] = useState(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -182,18 +185,35 @@ const Hero = () => {
       country?.displayName ||
       "";
     setSelectedCountry(country?._id ? country : null);
-    setRequest((prev) => ({ ...prev, destination: selection }));
+    setSelectedPurpose(null);
+    setRequest((prev) => ({ ...prev, destination: selection, purpose: "" }));
     setShowCountryList(false);
     setResult("");
     setFormError("");
   };
 
   return (
-    <section
-      id="hero"
-      className="relative overflow-hidden bg-slate-950 text-white"
-      aria-label="Visa application hero section"
-    >
+    <>
+      <style>{`
+        .country-list-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .country-list-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .country-list-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 3px;
+        }
+        .country-list-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      `}</style>
+      <section
+        id="hero"
+        className="relative overflow-hidden bg-slate-950 text-white"
+        aria-label="Visa application hero section"
+      >
       <div className="absolute inset-0">
         {heroSlides.map((slide, index) => (
           <div
@@ -238,14 +258,15 @@ const Hero = () => {
                   setResult("");
                   return;
                 }
-                const selectedPurpose = tripPurposes.find(
+                const purpose = tripPurposes.find(
                   (p) => p.name === request.purpose
                 );
-                if (!selectedPurpose?._id) {
+                if (!purpose?._id) {
                   setFormError("Please select a valid travel purpose.");
                   setResult("");
                   return;
                 }
+                setSelectedPurpose(purpose);
                 setFormError("");
                 setResult("");
                 setChecklistError("");
@@ -255,7 +276,7 @@ const Hero = () => {
                 try {
                   const response = await CountryChecklistService.getChecklist({
                     countryId: selectedCountry._id,
-                    tripPurposeId: selectedPurpose._id,
+                    tripPurposeId: purpose._id,
                   });
                   if (response?.data) {
                     setChecklistData(response.data);
@@ -306,7 +327,13 @@ const Hero = () => {
                   />
                 </label>
                 {showCountryList && (
-                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/90 backdrop-blur">
+                  <div 
+                    className="country-list-scrollbar absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 max-h-48 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/90 backdrop-blur shadow-xl"
+                    style={{
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+                    }}
+                  >
                     {countryLoading ? (
                       <p className="px-4 py-3 text-sm text-blue-100/80">
                         Loading destinations...
@@ -324,16 +351,16 @@ const Hero = () => {
                           <button
                             type="button"
                             key={key}
-                            className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-white transition hover:bg-white/10"
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-white transition hover:bg-white/10 first:rounded-t-2xl last:rounded-b-2xl"
                             onClick={() => handleCountrySelect(country)}
                           >
                             <img
                               src={flagSrc}
                               alt={country?.name || "Flag"}
-                              className="h-6 w-6 rounded-full object-cover"
+                              className="h-6 w-6 shrink-0 rounded-full object-cover"
                               loading="lazy"
                             />
-                            <span>{country?.name || "Unnamed country"}</span>
+                            <span className="truncate">{country?.name || "Unnamed country"}</span>
                           </button>
                         );
                       })
@@ -462,9 +489,33 @@ const Hero = () => {
             setChecklistData(null);
             setChecklistError("");
           }}
+          onOpenApplicationForm={() => {
+            // Close checklist modal and open application form modal
+            setChecklistModalOpen(false);
+            setTimeout(() => {
+              setApplicationFormModalOpen(true);
+            }, 100);
+          }}
+          countryId={selectedCountry?._id}
+          countryCode={selectedCountry?.code}
+          tripPurposeId={selectedPurpose?._id}
+          tripPurposeCode={selectedPurpose?.code}
+        />
+      )}
+      {applicationFormModalOpen && (
+        <ApplicationFormModal
+          open={applicationFormModalOpen}
+          onClose={() => {
+            setApplicationFormModalOpen(false);
+          }}
+          countryId={selectedCountry?._id}
+          countryCode={selectedCountry?.code}
+          tripPurposeId={selectedPurpose?._id}
+          tripPurposeCode={selectedPurpose?.code}
         />
       )}
     </section>
+    </>
   );
 };
 

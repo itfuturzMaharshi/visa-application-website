@@ -33,8 +33,30 @@ const formatSectionName = (name) => {
 const FilePreviewModal = ({ file, onClose }) => {
   if (!file) return null;
 
-  const isImage = file.type?.startsWith('image/');
-  const fileUrl = file instanceof File ? URL.createObjectURL(file) : file;
+  // Determine if it's an image
+  let isImage = false;
+  let fileUrl = '';
+  let fileName = '';
+  let fileSize = null;
+
+  if (file instanceof File) {
+    isImage = file.type?.startsWith('image/');
+    fileUrl = URL.createObjectURL(file);
+    fileName = file.name;
+    fileSize = file.size;
+  } else if (typeof file === 'string') {
+    // Saved file URL or base64
+    fileUrl = file;
+    isImage = file.startsWith('data:image/') || file.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i);
+    fileName = file.name || 'Saved File';
+    fileSize = file.size;
+  } else if (file.url) {
+    // File object with url property (from saved data)
+    fileUrl = file.url;
+    isImage = file.type === 'image' || file.url.startsWith('data:image/') || file.url.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i);
+    fileName = file.name || 'Saved File';
+    fileSize = file.size;
+  }
 
   return (
     <div
@@ -98,11 +120,13 @@ const FilePreviewModal = ({ file, onClose }) => {
                   />
                 </svg>
                 <p className="text-sm font-medium text-slate-700 mb-1">
-                  {file.name || 'Document'}
+                  {fileName || 'Document'}
                 </p>
-                <p className="text-xs text-slate-500">
-                  {(file.size / 1024).toFixed(2)} KB
-                </p>
+                {fileSize && (
+                  <p className="text-xs text-slate-500">
+                    {(fileSize / 1024).toFixed(2)} KB
+                  </p>
+                )}
                 <a
                   href={fileUrl}
                   target="_blank"
@@ -150,12 +174,13 @@ const ApplicationFormModal = ({
   const [previewModal, setPreviewModal] = useState({ show: false, file: null });
   const fileInputRefs = useRef({});
 
-  // Fetch form configuration when modal opens
+  // Fetch form configuration and saved data when modal opens
   useEffect(() => {
-    if (open && !formConfig) {
+    if (open) {
+      // Always fetch to get latest saved data
       fetchFormConfig();
     }
-  }, [open]);
+  }, [open, countryId, tripPurposeId]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -182,11 +207,12 @@ const ApplicationFormModal = ({
       });
       
       if (response?.data) {
-        setFormConfig(response.data);
+        const configData = response.data;
+        setFormConfig(configData);
+        
         // Initialize form data with empty values
         const initialData = {};
-        // Use formConfig.sections (not formConfig.formSections) based on backend response
-        const sections = response.data.formConfig?.sections || [];
+        const sections = configData.formConfig?.sections || [];
         sections.forEach((section) => {
           section.fields?.forEach((field) => {
             if (field.fieldType === 'checkbox') {
@@ -198,6 +224,119 @@ const ApplicationFormModal = ({
             }
           });
         });
+        
+        // Extract saved data from the response
+        // Saved data can be in previousFormData object or at root level of response.data
+        const newFilePreviews = {};
+        
+        // Create a map of field names with normalized versions for flexible matching
+        const fieldMap = new Map();
+        sections.forEach((section) => {
+          section.fields?.forEach((field) => {
+            // Store field with normalized name for matching
+            const normalizedName = field.fieldName.toLowerCase().replace(/\s+/g, '').replace(/_/g, '').replace(/-/g, '');
+            fieldMap.set(field.fieldName, { field, normalizedName });
+          });
+        });
+        
+        // Helper function to normalize keys for matching
+        const normalizeKey = (key) => {
+          if (!key) return '';
+          return String(key).toLowerCase().replace(/\s+/g, '').replace(/_/g, '').replace(/-/g, '');
+        };
+        
+        // Helper function to find matching field name
+        const findMatchingField = (responseKey) => {
+          // First try exact match
+          if (fieldMap.has(responseKey)) {
+            return { fieldName: responseKey, field: fieldMap.get(responseKey).field };
+          }
+          
+          // Try normalized match
+          const normalizedResponseKey = normalizeKey(responseKey);
+          for (const [fieldName, { field, normalizedName }] of fieldMap.entries()) {
+            if (normalizedName === normalizedResponseKey) {
+              return { fieldName, field };
+            }
+          }
+          
+          return null;
+        };
+        
+        // Helper function to set field value based on type
+        const setFieldValue = (fieldName, field, value) => {
+          if (value === null || value === undefined || value === '') {
+            return;
+          }
+          
+          const fieldType = field.fieldType;
+          
+          if (fieldType === 'file') {
+            // Handle file fields - could be URL or base64 string
+            if (typeof value === 'string' && (value.startsWith('data:') || value.startsWith('http'))) {
+              newFilePreviews[fieldName] = value;
+              initialData[fieldName] = value;
+            }
+          } else if (fieldType === 'checkbox') {
+            // Handle checkbox - convert to boolean
+            initialData[fieldName] = Boolean(value);
+          } else if (fieldType === 'number') {
+            // Handle number fields
+            initialData[fieldName] = typeof value === 'number' ? value : (isNaN(Number(value)) ? value : Number(value));
+          } else {
+            // Handle text, email, date, select, radio, textarea
+            initialData[fieldName] = String(value);
+          }
+        };
+        
+        // Track which fields have been set from previousFormData
+        const fieldsSetFromPreviousFormData = new Set();
+        
+        // First, try to get data from previousFormData object
+        if (configData.previousFormData && typeof configData.previousFormData === 'object') {
+          Object.keys(configData.previousFormData).forEach((key) => {
+            const savedValue = configData.previousFormData[key];
+            const match = findMatchingField(key);
+            if (match) {
+              setFieldValue(match.fieldName, match.field, savedValue);
+              fieldsSetFromPreviousFormData.add(match.fieldName);
+            }
+          });
+        }
+        
+        // Also check root-level fields (use as fallback if not in previousFormData)
+        Object.keys(configData).forEach((responseKey) => {
+          // Skip known config properties
+          if (responseKey === 'formConfig' || 
+              responseKey === 'country' || 
+              responseKey === 'tripPurpose' || 
+              responseKey === 'checklistItems' ||
+              responseKey === 'previousFormData') {
+            return;
+          }
+          
+          const savedValue = configData[responseKey];
+          const match = findMatchingField(responseKey);
+          if (match && !fieldsSetFromPreviousFormData.has(match.fieldName)) {
+            // Only set if not already set from previousFormData
+            setFieldValue(match.fieldName, match.field, savedValue);
+          }
+        });
+        
+        // Set file previews
+        if (Object.keys(newFilePreviews).length > 0) {
+          setFilePreviews(newFilePreviews);
+        }
+        
+        // Debug logging
+        console.log('Form data initialized:', initialData);
+        console.log('Saved data from response:', {
+          previousFormData: configData.previousFormData,
+          rootLevelFields: Object.keys(configData).filter(
+            key => !['formConfig', 'country', 'tripPurpose', 'checklistItems', 'previousFormData'].includes(key)
+          )
+        });
+        
         setFormData(initialData);
       }
     } catch (err) {
@@ -274,7 +413,23 @@ const ApplicationFormModal = ({
   const handleFilePreview = (fieldName) => {
     const file = formData[fieldName];
     if (file) {
-      setPreviewModal({ show: true, file });
+      if (file instanceof File) {
+        setPreviewModal({ show: true, file });
+      } else if (typeof file === 'string' && file) {
+        // Handle saved file URL/base64
+        const field = formConfig?.formConfig?.sections
+          ?.flatMap((s) => s.fields || [])
+          .find((f) => f.fieldName === fieldName);
+        const formattedLabel = field ? formatLabel(field.fieldLabel) : 'File';
+        setPreviewModal({ 
+          show: true, 
+          file: { 
+            url: file, 
+            name: `${formattedLabel} - Saved File`, 
+            type: file.startsWith('data:image/') || file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' : 'document' 
+          } 
+        });
+      }
     }
   };
 
@@ -286,8 +441,11 @@ const ApplicationFormModal = ({
       if (Array.isArray(value) && value.length === 0) {
         return `${formatLabel(field.fieldLabel)} is required`;
       }
-      if (value instanceof File && !value) {
-        return `${formatLabel(field.fieldLabel)} is required`;
+      // For file fields, accept File objects or non-empty strings (saved URLs/base64)
+      if (field.fieldType === 'file') {
+        if (!(value instanceof File) && !(typeof value === 'string' && value.trim() !== '')) {
+          return `${formatLabel(field.fieldLabel)} is required`;
+        }
       }
     }
 
@@ -371,10 +529,10 @@ const ApplicationFormModal = ({
         const value = data[key];
         
         if (value instanceof File) {
-          // Store file separately - will append to FormData
+          // Store file separately - will append to FormData as binary
           fileFields[key] = value;
         } else if (value !== null && value !== undefined && value !== '') {
-          // Add to formData object
+          // Add to formData object (including saved file URLs as strings)
           if (typeof value === 'boolean') {
             formDataObj[key] = value;
           } else if (typeof value === 'number') {
@@ -382,6 +540,7 @@ const ApplicationFormModal = ({
           } else if (typeof value === 'object') {
             formDataObj[key] = value;
           } else {
+            // String values (including saved file URLs/base64)
             formDataObj[key] = String(value);
           }
         }
@@ -478,7 +637,7 @@ const ApplicationFormModal = ({
       });
       
       // Redirect to Profile page after alert closes
-      navigate('/user-details');
+      navigate('/');
     } catch (err) {
       console.error('Error submitting application:', err);
       // Error is already handled by the service with toast
@@ -492,8 +651,8 @@ const ApplicationFormModal = ({
     const error = fieldErrors[field.fieldName];
     const hasError = !!error;
     const formattedLabel = formatLabel(field.fieldLabel);
-    const filePreview = filePreviews[field.fieldName];
-    const hasFile = value instanceof File;
+    const filePreview = filePreviews[field.fieldName] || (field.fieldType === 'file' && typeof value === 'string' && value ? value : null);
+    const hasFile = value instanceof File || (field.fieldType === 'file' && typeof value === 'string' && value);
 
     switch (field.fieldType) {
       case 'text':
@@ -862,10 +1021,17 @@ const ApplicationFormModal = ({
               {/* File Preview */}
               {hasFile && (
                 <div
-                  onClick={() => handleFilePreview(field.fieldName)}
+                  onClick={() => {
+                    if (value instanceof File) {
+                      handleFilePreview(field.fieldName);
+                    } else if (typeof value === 'string' && value) {
+                      // Handle saved file URL/base64
+                      setPreviewModal({ show: true, file: { url: value, name: `${formattedLabel} - Saved File`, type: value.startsWith('data:image/') ? 'image' : 'document' } });
+                    }
+                  }}
                   className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 cursor-pointer hover:bg-slate-100 transition"
                 >
-                  {filePreview && value?.type?.startsWith('image/') ? (
+                  {filePreview && (filePreview.startsWith('data:image/') || filePreview.startsWith('http') || (value instanceof File && value?.type?.startsWith('image/'))) ? (
                     <img
                       src={filePreview}
                       alt="Preview"
@@ -890,10 +1056,10 @@ const ApplicationFormModal = ({
                   )}
                   <div className="flex flex-col">
                     <span className="text-xs font-medium text-slate-700 truncate max-w-[200px]">
-                      {value.name}
+                      {value instanceof File ? value.name : `${formattedLabel} - Saved File`}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {(value.size / 1024).toFixed(2)} KB
+                      {value instanceof File ? `${(value.size / 1024).toFixed(2)} KB` : 'Previously uploaded'}
                     </span>
                   </div>
                   <button
