@@ -9,6 +9,30 @@ import ApplicationsListSection from "../components/userDetails/ApplicationsListS
 import DocumentDetailsSection from "../components/userDetails/DocumentDetailsSection";
 import { env } from "../utils/env";
 
+const PROFILE_IMAGE_BASE_URL =
+  (env.baseUrl && env.baseUrl.replace(/\/+$/, "")) ||
+  "https://visa-phase2.itfuturz.in";
+
+const buildProfileImageUrl = (path) => {
+  if (!path || typeof path !== "string") return "";
+  const trimmed = path.trim();
+  if (!trimmed) return "";
+
+  if (/^(data:|blob:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const normalizedPath = trimmed.startsWith("/")
+    ? trimmed
+    : `/${trimmed}`;
+
+  return `${PROFILE_IMAGE_BASE_URL}${normalizedPath}`;
+};
+
 // Image Crop Modal Component
 const ImageCropModal = ({ imageSrc, onCrop, onClose }) => {
   const canvasRef = useRef(null);
@@ -1208,6 +1232,7 @@ const UserDetails = () => {
     company_name: "",
     profilePic: "",
   });
+  const [profileFilePreview, setProfileFilePreview] = useState("");
 
   const [address, setAddress] = useState({
     street: "",
@@ -1257,6 +1282,15 @@ const UserDetails = () => {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (basicInfo.profilePic instanceof File) {
+      const objectUrl = URL.createObjectURL(basicInfo.profilePic);
+      setProfileFilePreview(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+    setProfileFilePreview("");
+  }, [basicInfo.profilePic]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -1636,19 +1670,6 @@ const UserDetails = () => {
         const userData = response.data;
         setProfile(userData);
 
-        // Construct full URL for profile picture if it's a relative path
-        let profilePicUrl = "";
-        if (userData.profilePic) {
-          // If it's already a full URL, use it; otherwise construct from base URL
-          if (userData.profilePic.startsWith("http://") || userData.profilePic.startsWith("https://")) {
-            profilePicUrl = userData.profilePic;
-          } else {
-            // Get base URL from API config
-            const baseURL = env.baseUrl || 'https://visa-phase2.itfuturz.in';
-            profilePicUrl = `${baseURL}/${userData.profilePic}`;
-          }
-        }
-
         // Populate form fields
         setBasicInfo({
           fullName: userData.fullName || "",
@@ -1661,7 +1682,7 @@ const UserDetails = () => {
           gender: userData.gender || "",
           city: userData.city || "",
           company_name: userData.company_name || "",
-          profilePic: profilePicUrl,
+          profilePic: buildProfileImageUrl(userData.profilePic),
         });
 
         setAddress({
@@ -2256,12 +2277,12 @@ const UserDetails = () => {
     );
   }
 
-  // Use SVG data URI as placeholder to avoid external requests
-  const profilePlaceholder =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%2394a3b8'%3EProfile Photo%3C/text%3E%3C/svg%3E";
   const passportPlaceholder =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%2394a3b8'%3EPassport Image%3C/text%3E%3C/svg%3E";
-
+  const profileImageUrl =
+    basicInfo.profilePic instanceof File
+      ? profileFilePreview
+      : buildProfileImageUrl(basicInfo.profilePic);
   return (
     <section className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
@@ -2318,29 +2339,25 @@ const UserDetails = () => {
                   <div className="relative">
                     {isEditing ? (
                       <ImageUpload
-                        value={basicInfo.profilePic}
+                        value={
+                          basicInfo.profilePic instanceof File
+                            ? basicInfo.profilePic
+                            : profileImageUrl
+                        }
                         onChange={(value) =>
                           setBasicInfo({ ...basicInfo, profilePic: value })
                         }
-                        placeholder={profilePlaceholder}
                         aspectRatio="square"
                         className="w-24"
                       />
                     ) : (
-                      <div className="h-24 w-24 overflow-hidden rounded-full bg-gradient-to-br from-indigo-400 to-purple-500">
-                        {basicInfo.profilePic ? (
+                      <div className="h-24 w-24 overflow-hidden rounded-full bg-gradient-to-br">
+                        {profileImageUrl && (
                           <img
-                            src={basicInfo.profilePic}
+                            src={profileImageUrl}
                             alt={profile.fullName}
                             className="h-full w-full object-cover"
-                            onError={(e) => {
-                              e.target.src = profilePlaceholder;
-                            }}
                           />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
-                            {profile.fullName.charAt(0).toUpperCase()}
-                          </div>
                         )}
                       </div>
                     )}
