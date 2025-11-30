@@ -161,6 +161,7 @@ const ApplicationFormModal = ({
   countryCode,
   tripPurposeId,
   tripPurposeCode,
+  extractedData,
 }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -182,6 +183,7 @@ const ApplicationFormModal = ({
     }
   }, [open, countryId, tripPurposeId]);
 
+
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
@@ -194,6 +196,114 @@ const ApplicationFormModal = ({
       setPreviewModal({ show: false, file: null });
     }
   }, [open]);
+
+  // Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD
+  const parseDateForInput = (dateString) => {
+    if (!dateString) return '';
+    // Try DD/MM/YYYY format
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+    // Try other formats or return as is
+    return dateString;
+  };
+
+  // Helper function to map gender
+  const mapGender = (gender) => {
+    if (!gender) return '';
+    const g = gender.toLowerCase();
+    if (g === 'm' || g === 'male') return 'Male';
+    if (g === 'f' || g === 'female') return 'Female';
+    return gender;
+  };
+
+  // Fill form fields with extracted data
+  const fillFormWithExtractedData = (extracted, currentFormData = formData) => {
+    if (!extracted || !formConfig) return;
+
+    const sections = formConfig?.formConfig?.sections || [];
+    const updatedData = { ...currentFormData };
+
+    // Map passport data
+    if (extracted.passport) {
+      const passport = extracted.passport;
+      
+      sections.forEach((section) => {
+        section.fields?.forEach((field) => {
+          const fieldName = field.fieldName;
+          
+          // Map passport fields
+          if (fieldName === 'passportNumber' && passport.passport_number) {
+            updatedData[fieldName] = passport.passport_number;
+          } else if (fieldName === 'fullName' && (passport.name || passport.full_name)) {
+            updatedData[fieldName] = passport.name || passport.full_name || '';
+          } else if (fieldName === 'dateOfBirth' && passport.dob) {
+            updatedData[fieldName] = parseDateForInput(passport.dob);
+          } else if (fieldName === 'placeOfBirth' && passport.place_of_birth) {
+            updatedData[fieldName] = passport.place_of_birth;
+          } else if (fieldName === 'nationality' && passport.nationality) {
+            updatedData[fieldName] = passport.nationality;
+          } else if (fieldName === 'gender' && passport.sex) {
+            updatedData[fieldName] = mapGender(passport.sex);
+          } else if (fieldName === 'passportIssueDate' && passport.date_of_issue) {
+            updatedData[fieldName] = parseDateForInput(passport.date_of_issue);
+          } else if (fieldName === 'passportExpiryDate' && passport.date_of_expiry) {
+            updatedData[fieldName] = parseDateForInput(passport.date_of_expiry);
+          } else if (fieldName === 'passportIssuePlace' && passport.place_of_issue) {
+            updatedData[fieldName] = passport.place_of_issue;
+          } else if (fieldName === 'passportPinCode' && passport.pin_code) {
+            updatedData[fieldName] = passport.pin_code;
+          } else if (fieldName === 'passportFatherName' && passport.father_name) {
+            updatedData[fieldName] = passport.father_name;
+          } else if (fieldName === 'passportMotherName' && passport.mother_name) {
+            updatedData[fieldName] = passport.mother_name;
+          } else if (fieldName === 'spouseName' && passport.spouse_name) {
+            updatedData[fieldName] = passport.spouse_name;
+          } else if (fieldName === 'address' && passport.address) {
+            updatedData[fieldName] = passport.address;
+          } else if (fieldName === 'fileNumber' && passport.file_number) {
+            updatedData[fieldName] = passport.file_number;
+          } else if (fieldName === 'oldPassportNumber' && passport.old_passport_number) {
+            updatedData[fieldName] = passport.old_passport_number;
+          } else if (fieldName === 'oldPassportIssueDate' && passport.old_passport_issue_date) {
+            updatedData[fieldName] = parseDateForInput(passport.old_passport_issue_date);
+          } else if (fieldName === 'oldPassportIssuePlace' && passport.old_passport_issue_place) {
+            updatedData[fieldName] = passport.old_passport_issue_place;
+          }
+        });
+      });
+    }
+
+    // Map PAN data
+    if (extracted.pan) {
+      const pan = extracted.pan;
+      
+      sections.forEach((section) => {
+        section.fields?.forEach((field) => {
+          const fieldName = field.fieldName;
+          
+          if (fieldName === 'panNumber' && pan.pan_number) {
+            updatedData[fieldName] = pan.pan_number;
+          } else if (fieldName === 'panName' && pan.name) {
+            updatedData[fieldName] = pan.name;
+          } else if (fieldName === 'panDob' && pan.dob) {
+            updatedData[fieldName] = parseDateForInput(pan.dob);
+          } else if (fieldName === 'panFatherName' && pan.father_name) {
+            updatedData[fieldName] = pan.father_name;
+          }
+        });
+      });
+    }
+
+    // Update form data
+    setFormData(updatedData);
+    
+    console.log('Form filled with extracted data:', updatedData);
+  };
 
   const fetchFormConfig = async () => {
     setLoading(true);
@@ -338,6 +448,87 @@ const ApplicationFormModal = ({
         });
         
         setFormData(initialData);
+        
+        // Fill form with extracted data if available
+        if (extractedData) {
+          // Fill immediately with the initialized data
+          const filledData = { ...initialData };
+          const sections = configData.formConfig?.sections || [];
+          
+          // Map passport data
+          if (extractedData.passport) {
+            const passport = extractedData.passport;
+            
+            sections.forEach((section) => {
+              section.fields?.forEach((field) => {
+                const fieldName = field.fieldName;
+                
+                if (fieldName === 'passportNumber' && passport.passport_number) {
+                  filledData[fieldName] = passport.passport_number;
+                } else if (fieldName === 'fullName' && (passport.name || passport.full_name)) {
+                  filledData[fieldName] = passport.name || passport.full_name || '';
+                } else if (fieldName === 'dateOfBirth' && passport.dob) {
+                  filledData[fieldName] = parseDateForInput(passport.dob);
+                } else if (fieldName === 'placeOfBirth' && passport.place_of_birth) {
+                  filledData[fieldName] = passport.place_of_birth;
+                } else if (fieldName === 'nationality' && passport.nationality) {
+                  filledData[fieldName] = passport.nationality;
+                } else if (fieldName === 'gender' && passport.sex) {
+                  filledData[fieldName] = mapGender(passport.sex);
+                } else if (fieldName === 'passportIssueDate' && passport.date_of_issue) {
+                  filledData[fieldName] = parseDateForInput(passport.date_of_issue);
+                } else if (fieldName === 'passportExpiryDate' && passport.date_of_expiry) {
+                  filledData[fieldName] = parseDateForInput(passport.date_of_expiry);
+                } else if (fieldName === 'passportIssuePlace' && passport.place_of_issue) {
+                  filledData[fieldName] = passport.place_of_issue;
+                } else if (fieldName === 'passportPinCode' && passport.pin_code) {
+                  filledData[fieldName] = passport.pin_code;
+                } else if (fieldName === 'passportFatherName' && passport.father_name) {
+                  filledData[fieldName] = passport.father_name;
+                } else if (fieldName === 'passportMotherName' && passport.mother_name) {
+                  filledData[fieldName] = passport.mother_name;
+                } else if (fieldName === 'spouseName' && passport.spouse_name) {
+                  filledData[fieldName] = passport.spouse_name;
+                } else if (fieldName === 'address' && passport.address) {
+                  filledData[fieldName] = passport.address;
+                } else if (fieldName === 'fileNumber' && passport.file_number) {
+                  filledData[fieldName] = passport.file_number;
+                } else if (fieldName === 'oldPassportNumber' && passport.old_passport_number) {
+                  filledData[fieldName] = passport.old_passport_number;
+                } else if (fieldName === 'oldPassportIssueDate' && passport.old_passport_issue_date) {
+                  filledData[fieldName] = parseDateForInput(passport.old_passport_issue_date);
+                } else if (fieldName === 'oldPassportIssuePlace' && passport.old_passport_issue_place) {
+                  filledData[fieldName] = passport.old_passport_issue_place;
+                }
+              });
+            });
+          }
+          
+          // Map PAN data
+          if (extractedData.pan) {
+            const pan = extractedData.pan;
+            
+            sections.forEach((section) => {
+              section.fields?.forEach((field) => {
+                const fieldName = field.fieldName;
+                
+                if (fieldName === 'panNumber' && pan.pan_number) {
+                  filledData[fieldName] = pan.pan_number;
+                } else if (fieldName === 'panName' && pan.name) {
+                  filledData[fieldName] = pan.name;
+                } else if (fieldName === 'panDob' && pan.dob) {
+                  filledData[fieldName] = parseDateForInput(pan.dob);
+                } else if (fieldName === 'panFatherName' && pan.father_name) {
+                  filledData[fieldName] = pan.father_name;
+                }
+              });
+            });
+          }
+          
+          // Update form data with extracted values
+          setFormData(filledData);
+          console.log('Form filled with extracted data:', filledData);
+        }
       }
     } catch (err) {
       setError('Failed to load form configuration. Please try again.');

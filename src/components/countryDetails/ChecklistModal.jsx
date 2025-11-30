@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import Swal from "sweetalert2";
 import UploadDocumentService from "../../services/uploadDocument/uploadDocument.services";
+import DocumentExtractionService from "../../services/documentExtraction/documentExtraction.services";
 import { resolveFileUrl } from "../../utils/fileUrl";
 
 // Image Crop Modal Component
@@ -719,6 +720,7 @@ const ChecklistModal = ({
   countryCode,
   tripPurposeId,
   tripPurposeCode,
+  onExtractedDataReady,
 }) => {
   const ACCEPTED_FILE_TYPES = [
     ".jpg",
@@ -1382,11 +1384,103 @@ const ChecklistModal = ({
   };
 
   // Handle Next button click
-  const handleNext = () => {
-    if (allRequiredUploaded && onOpenApplicationForm) {
+  const handleNext = async () => {
+    if (!allRequiredUploaded || !onOpenApplicationForm) {
+      return;
+    }
+
+    // Show loading state with better message
+    Swal.fire({
+      title: 'Processing Documents',
+      html: `
+        <div style="text-align: center; padding: 20px;">
+          <div style="margin-bottom: 20px;">
+            <div class="swal2-spinner" style="border-color: #4f46e5 transparent #4f46e5 transparent;"></div>
+          </div>
+          <p style="font-size: 16px; color: #374151; margin-bottom: 10px;">
+            <strong>Please wait...</strong>
+          </p>
+          <p style="font-size: 14px; color: #6b7280;">
+            Extracting data from your documents using AI.<br/>
+            This may take 30-60 seconds.
+          </p>
+          <p style="font-size: 12px; color: #9ca3af; margin-top: 15px;">
+            Do not close this window
+          </p>
+        </div>
+      `,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      // Call document extraction API (this may take time due to Gemini processing)
+      const extractionResponse = await DocumentExtractionService.getUserDocumentsAndExtract();
+      
+      // Extract the extracted data
+      const extractedData = extractionResponse?.data?.extracted_data || {};
+      
+      // Pass extracted data to parent component
+      if (onExtractedDataReady && extractedData) {
+        onExtractedDataReady(extractedData);
+      }
+
+      // Close loading alert
+      Swal.close();
+
+      // Show success message briefly
+      await Swal.fire({
+        icon: 'success',
+        title: 'Data Extracted!',
+        text: 'Your document data has been extracted successfully.',
+        timer: 1500,
+        showConfirmButton: false,
+        timerProgressBar: true,
+      });
+
       // Call parent callback to open application form modal
       // This will also close the checklist modal
       onOpenApplicationForm();
+    } catch (error) {
+      console.error('Error extracting document data:', error);
+      
+      // Close loading alert
+      Swal.close();
+      
+      // Show error but still allow to proceed
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Data Extraction Failed',
+        html: `
+          <p style="margin-bottom: 15px;">
+            Could not extract data from documents. This might be due to:
+          </p>
+          <ul style="text-align: left; margin: 0 20px 15px 20px; color: #6b7280;">
+            <li>Poor image quality</li>
+            <li>Document not clearly visible</li>
+            <li>Network timeout</li>
+          </ul>
+          <p style="color: #6b7280;">
+            You can still proceed to fill the form manually.
+          </p>
+        `,
+        confirmButtonText: 'Continue to Form',
+        confirmButtonColor: '#4f46e5',
+        showCancelButton: true,
+        cancelButtonText: 'Try Again',
+        cancelButtonColor: '#6b7280',
+      }).then((result) => {
+        if (result.isConfirmed || result.dismiss === Swal.DismissReason.backdrop) {
+          // Open application form
+          onOpenApplicationForm();
+        } else if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+          // User wants to try again - do nothing, let them click Next again
+        }
+      });
     }
   };
 

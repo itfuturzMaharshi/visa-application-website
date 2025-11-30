@@ -48,6 +48,7 @@ const CountryDetails = () => {
   const [checklistError, setChecklistError] = useState("");
   const [checklistData, setChecklistData] = useState(null);
   const [applicationFormModalOpen, setApplicationFormModalOpen] = useState(false);
+  const [extractedData, setExtractedData] = useState(null);
 
   useEffect(() => {
     const fetchCountryDetails = async () => {
@@ -337,6 +338,11 @@ const CountryDetails = () => {
     setChecklistModalOpen(false);
   };
 
+  const handleExtractedDataReady = (data) => {
+    // Store extracted data to pass to application form
+    setExtractedData(data);
+  };
+
   const handleOpenApplicationForm = () => {
     // Close checklist modal and open application form modal
     setChecklistModalOpen(false);
@@ -347,6 +353,8 @@ const CountryDetails = () => {
 
   const handleCloseApplicationForm = () => {
     setApplicationFormModalOpen(false);
+    // Clear extracted data when closing form
+    setExtractedData(null);
   };
 
   return (
@@ -390,6 +398,7 @@ const CountryDetails = () => {
         checklist={checklistData}
         onClose={closeChecklistModal}
         onOpenApplicationForm={handleOpenApplicationForm}
+        onExtractedDataReady={handleExtractedDataReady}
         countryId={countryData?._id}
         countryCode={countryData?.countryCode}
         tripPurposeId={selectedPurpose?._id}
@@ -402,6 +411,7 @@ const CountryDetails = () => {
         countryCode={countryData?.countryCode}
         tripPurposeId={selectedPurpose?._id}
         tripPurposeCode={selectedPurpose?.code}
+        extractedData={extractedData}
       />
     </div>
   );

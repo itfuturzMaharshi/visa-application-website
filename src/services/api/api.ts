@@ -5,7 +5,7 @@ import { env } from '../../utils/env';
 
 const api = axios.create({
   baseURL: env.baseUrl,
-  timeout: 10000,
+  timeout: 0, // No default timeout - individual requests can set their own timeout
 });
 
 const redirectToLogin = () => {
