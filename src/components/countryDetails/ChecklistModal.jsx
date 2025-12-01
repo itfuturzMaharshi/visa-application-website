@@ -832,10 +832,12 @@ const ChecklistModal = ({
         // This ensures documents persist when switching trip purposes or reopening modal
         if (item.uploadedDocuments && Array.isArray(item.uploadedDocuments) && item.uploadedDocuments.length > 0) {
           const documentsFromAPI = item.uploadedDocuments.map((doc) => {
-            // Extract file name from URL or use documentType or title
-            const fileName = doc.fileUrl
-              ? doc.fileUrl.split("/").pop() || doc.documentType || doc.title || "document"
-              : doc.documentType || doc.title || "document";
+            // Use originalFileName if available, otherwise fallback to extracting from URL or using documentType
+            const fileName = doc.originalFileName 
+              ? doc.originalFileName
+              : (doc.fileUrl
+                  ? doc.fileUrl.split("/").pop() || doc.documentType || doc.title || "document"
+                  : doc.documentType || doc.title || "document");
 
             return {
               id: doc._id,
@@ -1057,6 +1059,7 @@ const ChecklistModal = ({
       });
 
       // Update file status to "success" and store document ID
+      // Use originalFileName from response if available, otherwise keep the current name
       setUploadedFiles((prev) => ({
         ...prev,
         [itemId]: (prev[itemId] || []).map((f) =>
@@ -1066,6 +1069,7 @@ const ChecklistModal = ({
                 status: "success",
                 documentId: response?.data?._id || null,
                 url: response?.data?.fileUrl || f.url,
+                name: response?.data?.originalFileName || f.name, // Use original filename from backend
               }
             : f
         ),

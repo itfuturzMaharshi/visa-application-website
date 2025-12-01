@@ -23,6 +23,7 @@ export interface DocumentData {
   checklistItem: string;
   documentType: string;
   fileUrl: string;
+  originalFileName?: string;
   verificationStatus: 'pending' | 'approved' | 'rejected';
   createdAt?: string | Date;
   updatedAt?: string | Date;
