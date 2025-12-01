@@ -1087,7 +1087,7 @@ const ChecklistModal = ({
     }
   };
 
-  // Handle file removal
+  // Handle file removal (for files that haven't been uploaded yet)
   const handleRemoveFile = (itemId, fileId) => {
     setUploadedFiles((prev) => ({
       ...prev,
@@ -1102,6 +1102,77 @@ const ChecklistModal = ({
         return true;
       }),
     }));
+  };
+
+  // Handle document deletion (for successfully uploaded documents)
+  const handleDeleteDocument = async (itemId, fileId, documentId) => {
+    if (!documentId) {
+      // If no documentId, it's not uploaded yet, just remove from state
+      handleRemoveFile(itemId, fileId);
+      return;
+    }
+
+    // Confirm deletion
+    const result = await Swal.fire({
+      icon: "question",
+      title: "Delete Document?",
+      text: "Are you sure you want to delete this document? This action cannot be undone.",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      // Show loading
+      Swal.fire({
+        title: "Deleting...",
+        text: "Please wait while we delete the document.",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      // Call delete API
+      await UploadDocumentService.deleteDocument(documentId);
+
+      // Remove from state
+      setUploadedFiles((prev) => ({
+        ...prev,
+        [itemId]: (prev[itemId] || []).filter((f) => {
+          if (f.id === fileId) {
+            // Clean up object URL if it exists
+            if (f.url && f.url.startsWith("blob:")) {
+              URL.revokeObjectURL(f.url);
+            }
+            return false;
+          }
+          return true;
+        }),
+      }));
+
+      // Close loading and show success
+      Swal.close();
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: "Document has been deleted successfully.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error("Delete error:", error);
+      Swal.close();
+      // Error toast is already shown by the service
+    }
   };
 
   // Handle image upload (gallery or camera)
@@ -1672,7 +1743,7 @@ const ChecklistModal = ({
                             >
                               {/* File Preview/Icon */}
                               <div 
-                                className="shrink-0"
+                                className="relative shrink-0 group"
                                 title={file.status === "success" ? "Click to preview" : ""}
                               >
                                 {file.url && 
@@ -1680,14 +1751,44 @@ const ChecklistModal = ({
                                   file.url.startsWith("blob:") ||
                                   file.url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ||
                                   file.name?.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i)) ? (
-                                  <img
-                                    src={file.url}
-                                    alt={file.name}
-                                    className="h-12 w-12 rounded-lg object-cover"
-                                    onError={(e) => {
-                                      e.target.style.display = "none";
-                                    }}
-                                  />
+                                  <>
+                                    <img
+                                      src={file.url}
+                                      alt={file.name}
+                                      className="h-12 w-12 rounded-lg object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = "none";
+                                      }}
+                                    />
+                                    {/* X mark overlay on image */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (file.status === "success" && file.documentId) {
+                                          handleDeleteDocument(item._id, file.id, file.documentId);
+                                        } else {
+                                          handleRemoveFile(item._id, file.id);
+                                        }
+                                      }}
+                                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white shadow-md transition hover:bg-rose-600 hover:shadow-lg"
+                                      title={file.status === "success" ? "Delete document" : "Remove file"}
+                                    >
+                                      <svg
+                                        className="h-3 w-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={3}
+                                          d="M6 18L18 6M6 6l12 12"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </>
                                 ) : (
                                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-200">
                                     <svg
@@ -1783,16 +1884,27 @@ const ChecklistModal = ({
                                 </div>
                               </div>
 
-                              {/* Remove Button - Only show for files that are not successfully uploaded */}
-                              {file.status !== "success" && (
+                              {/* Delete Button for non-image files */}
+                              {!(file.url && 
+                                 (file.url.startsWith("data:image") || 
+                                  file.url.startsWith("blob:") ||
+                                  file.url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) ||
+                                  file.name?.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i))) && (
                                 <button
                                   type="button"
-                                  onClick={() => handleRemoveFile(item._id, file.id)}
-                                  className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-rose-600"
-                                  title="Remove file"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (file.status === "success" && file.documentId) {
+                                      handleDeleteDocument(item._id, file.id, file.documentId);
+                                    } else {
+                                      handleRemoveFile(item._id, file.id);
+                                    }
+                                  }}
+                                  className="shrink-0 rounded-full bg-white/90 p-1.5 text-rose-500 shadow-md transition hover:bg-rose-50 hover:text-rose-600 hover:shadow-lg"
+                                  title={file.status === "success" ? "Delete document" : "Remove file"}
                                 >
                                   <svg
-                                    className="h-5 w-5"
+                                    className="h-4 w-4"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -1800,7 +1912,7 @@ const ChecklistModal = ({
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
-                                      strokeWidth={2}
+                                      strokeWidth={2.5}
                                       d="M6 18L18 6M6 6l12 12"
                                     />
                                   </svg>

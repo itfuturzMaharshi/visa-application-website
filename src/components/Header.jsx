@@ -17,7 +17,7 @@ const HeaderUserMenu = ({ onNavigate }) => {
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const checkAuthState = useCallback(() => {
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
     
@@ -37,6 +37,29 @@ const HeaderUserMenu = ({ onNavigate }) => {
       setIsLoggedIn(false);
     }
   }, []);
+
+  useEffect(() => {
+    // Check auth state on mount
+    checkAuthState();
+
+    // Listen for storage changes (when localStorage is updated)
+    const handleStorageChange = () => {
+      checkAuthState();
+    };
+
+    // Listen for custom auth state change event
+    const handleAuthStateChange = () => {
+      checkAuthState();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("authStateChanged", handleAuthStateChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("authStateChanged", handleAuthStateChange);
+    };
+  }, [checkAuthState]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

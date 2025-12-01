@@ -81,6 +81,20 @@ const Register = () => {
     const cleanedPhone = formData.phone.replace(/\s|-/g, "");
     setLoading(true);
 
+    // Show immediate message that account will be created
+    Swal.fire({
+      icon: "info",
+      title: "Creating Your Account",
+      text: "Your account will be created. Please wait...",
+      confirmButtonColor: "#0f172a",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
     try {
       const response = await AuthService.register({
         fullName: formData.name,
@@ -95,6 +109,8 @@ const Register = () => {
       // Registration is successful - OTP is sent, show verification step
       const responseData = response?.data?.data || response?.data;
       if (response?.success || responseData?.requiresOtp) {
+        // Close the loading message and show success
+        Swal.close();
         // Show success message and switch to OTP verification step
         await Swal.fire({
           icon: "success",
@@ -109,6 +125,7 @@ const Register = () => {
         otpRefs.current[0]?.focus();
       }
     } catch (error) {
+      Swal.close();
       const errorMessage =
         error?.response?.data?.message || "Registration failed. Please try again.";
       await Swal.fire({
@@ -173,6 +190,11 @@ const Register = () => {
       if (response?.success && responseData?.token && responseData?.user) {
         localStorage.setItem("token", responseData.token);
         localStorage.setItem("user", JSON.stringify(responseData.user));
+        
+        // Dispatch custom event to notify header about auth state change
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("authStateChanged"));
+        
         await Swal.fire({
           icon: "success",
           title: "Registration Complete!",

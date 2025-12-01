@@ -74,6 +74,36 @@ export class UploadDocumentService {
       throw error;
     }
   }
+
+  static async deleteDocument(
+    documentId: string
+  ): Promise<UploadDocumentResponse> {
+    try {
+      const response = await api.post('/mobile/website/documents/delete', {
+        documentId,
+      });
+      const ok = response.data?.success === true || response.data?.status === 200;
+      
+      if (!ok) {
+        toastHelper.showTost(
+          response.data?.message || 'Failed to delete document',
+          'error'
+        );
+      } else {
+        toastHelper.showTost(
+          response.data?.message || 'Document deleted successfully',
+          'success'
+        );
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message || 'Failed to delete document. Please try again.';
+      toastHelper.showTost(message, 'error');
+      throw error;
+    }
+  }
 }
 
 export default UploadDocumentService;

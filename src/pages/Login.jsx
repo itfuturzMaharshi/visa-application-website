@@ -132,6 +132,11 @@ const Login = () => {
       if (response?.success && responseData?.token && responseData?.user) {
         localStorage.setItem("token", responseData.token);
         localStorage.setItem("user", JSON.stringify(responseData.user));
+        
+        // Dispatch custom event to notify header about auth state change
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("authStateChanged"));
+        
         await Swal.fire({
           icon: "success",
           title: "Login Successful!",
