@@ -1477,7 +1477,7 @@ const ChecklistModal = ({
           </p>
           <p style="font-size: 14px; color: #6b7280;">
             Extracting data from your documents using AI.<br/>
-            This may take 30-60 seconds.
+            This may take a few seconds.
           </p>
           <p style="font-size: 12px; color: #9ca3af; margin-top: 15px;">
             Do not close this window
